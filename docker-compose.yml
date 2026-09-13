@@ -1,0 +1,30 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: sqlite:///./database/project_monitoring.db
+    ports:
+      - "8000:8000"
+    volumes:
+      - project-data:/app/database
+      - model-artifacts:/app/artifacts/models
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:8000/api
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  project-data:
+  model-artifacts:

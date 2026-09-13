@@ -1,0 +1,17 @@
+.env
+.env.*
+.git
+.gitignore
+.venv
+venv
+__pycache__
+*.py[cod]
+.pytest_cache
+tests/.runtime
+frontend/node_modules
+frontend/dist
+frontend/.vite
+artifacts/models
+database/*.db
+database/*-wal
+database/*-shm
