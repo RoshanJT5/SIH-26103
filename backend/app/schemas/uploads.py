@@ -50,3 +50,13 @@ class DatasetQualityResponse(BaseModel):
     limit: int
     summary: list[QualitySummary]
     issues: list[IngestionIssueResponse]
+
+
+class DatasetListItem(BaseModel):
+    dataset_id: int
+    source_name: str
+    source_as_of_date: date | None
+    imported_at: datetime
+    status: str
+    accepted_count: int
+    rejected_count: int

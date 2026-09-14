@@ -13,7 +13,16 @@ from ..models import Dataset, Project, ProjectSnapshot, RiskExplanation, RiskPre
 
 logger = logging.getLogger(__name__)
 
-Intent = Literal["rank_projects", "explain_project", "summarize_group", "compare_peers"]
+Intent = Literal[
+    "rank_projects",
+    "explain_project",
+    "summarize_group",
+    "compare_peers",
+    "find_deteriorating_projects",
+    "list_early_warnings",
+    "show_priority",
+    "show_cost_drivers",
+]
 
 
 @dataclass(frozen=True)
@@ -34,11 +43,27 @@ class Retrieval:
 
 def parse_intent(question: str) -> ParsedIntent:
     normalized = " ".join(question.lower().split())
-    if any(term in normalized for term in ("compare", "compared with", "peer", "similar project")):
-        intent: Intent = "compare_peers"
-    elif any(term in normalized for term in ("explain", "why", "reason", "risk of", "drivers")):
+    if any(
+        term in normalized for term in ("deteriorat", "worsen", "declin", "trend down")
+    ):
+        intent: Intent = "find_deteriorating_projects"
+    elif any(term in normalized for term in ("early warning", "warnings", "alert")):
+        intent = "list_early_warnings"
+    elif any(term in normalized for term in ("priority", "intervention", "queue")):
+        intent = "show_priority"
+    elif any(term in normalized for term in ("cost driver", "cost-driver", "driver")):
+        intent = "show_cost_drivers"
+    elif any(
+        term in normalized
+        for term in ("compare", "compared with", "peer", "similar project")
+    ):
+        intent = "compare_peers"
+    elif any(term in normalized for term in ("explain", "why", "reason", "risk of")):
         intent = "explain_project"
-    elif any(term in normalized for term in ("sector", "ministry", "portfolio", "summarize", "summary")) and not any(term in normalized for term in ("highest", "top", "rank")):
+    elif any(
+        term in normalized
+        for term in ("sector", "ministry", "portfolio", "summarize", "summary")
+    ) and not any(term in normalized for term in ("highest", "top", "rank")):
         intent = "summarize_group"
     else:
         intent = "rank_projects"
@@ -48,12 +73,20 @@ def parse_intent(question: str) -> ParsedIntent:
     if quoted:
         project_term = quoted.group(1).strip()
     elif intent in {"explain_project", "compare_peers"}:
-        match = re.search(r"(?:project|for)\s+([A-Za-z0-9][A-Za-z0-9 ._/-]{1,100})", question, re.IGNORECASE)
+        match = re.search(
+            r"(?:project|for)\s+([A-Za-z0-9][A-Za-z0-9 ._/-]{1,100})",
+            question,
+            re.IGNORECASE,
+        )
         if match:
             project_term = match.group(1).strip(" .?!")
 
     group_term = None
-    group_match = re.search(r"(?:sector|ministry)\s*[:=]?\s*([A-Za-z][A-Za-z0-9 &-]{1,100})", question, re.IGNORECASE)
+    group_match = re.search(
+        r"(?:sector|ministry)\s*[:=]?\s*([A-Za-z][A-Za-z0-9 &-]{1,100})",
+        question,
+        re.IGNORECASE,
+    )
     if group_match:
         group_term = group_match.group(1).strip(" .?!")
     return ParsedIntent(intent, project_term, group_term)
@@ -61,15 +94,25 @@ def parse_intent(question: str) -> ParsedIntent:
 
 def _latest_prediction(session: Session, snapshot_id: int) -> RiskPrediction | None:
     return session.scalar(
-        select(RiskPrediction).where(RiskPrediction.snapshot_id == snapshot_id).order_by(RiskPrediction.predicted_at.desc(), RiskPrediction.id.desc()).limit(1)
+        select(RiskPrediction)
+        .where(RiskPrediction.snapshot_id == snapshot_id)
+        .order_by(RiskPrediction.predicted_at.desc(), RiskPrediction.id.desc())
+        .limit(1)
     )
 
 
-def _completed_snapshots(session: Session, dataset_id: int | None) -> list[ProjectSnapshot]:
+def _completed_snapshots(
+    session: Session, dataset_id: int | None
+) -> list[ProjectSnapshot]:
     conditions = [Dataset.status == "completed"]
     if dataset_id is not None:
         conditions.append(ProjectSnapshot.dataset_id == dataset_id)
-    return session.scalars(select(ProjectSnapshot).join(ProjectSnapshot.dataset).where(*conditions).order_by(ProjectSnapshot.id.asc())).all()
+    return session.scalars(
+        select(ProjectSnapshot)
+        .join(ProjectSnapshot.dataset)
+        .where(*conditions)
+        .order_by(ProjectSnapshot.id.asc())
+    ).all()
 
 
 def _project_matches(snapshot: ProjectSnapshot, term: str) -> bool:
@@ -77,7 +120,9 @@ def _project_matches(snapshot: ProjectSnapshot, term: str) -> bool:
     return term.lower() in value
 
 
-def _resolve_project(session: Session, term: str | None, dataset_id: int | None) -> tuple[ProjectSnapshot | None, list[ProjectSnapshot]]:
+def _resolve_project(
+    session: Session, term: str | None, dataset_id: int | None
+) -> tuple[ProjectSnapshot | None, list[ProjectSnapshot]]:
     snapshots = _completed_snapshots(session, dataset_id)
     if not term:
         return None, snapshots
@@ -92,23 +137,126 @@ def _source(source_type: str, source_id: int | str, label: str) -> dict[str, str
 def _score_text(prediction: RiskPrediction | None) -> str:
     if prediction is None or prediction.overall_score is None:
         return "risk unavailable"
-    return f"{prediction.overall_score:.1f}/100 ({prediction.risk_band or 'unavailable'})"
+    return (
+        f"{prediction.overall_score:.1f}/100 ({prediction.risk_band or 'unavailable'})"
+    )
 
 
-def retrieve_context(session: Session, parsed: ParsedIntent, dataset_id: int | None) -> Retrieval:
+def retrieve_context(
+    session: Session, parsed: ParsedIntent, dataset_id: int | None
+) -> Retrieval:
     snapshots = _completed_snapshots(session, dataset_id)
     if not snapshots:
-        return Retrieval("No completed dataset records were found.", "No completed project data is available for this query.", [], dataset_id, ["Import a completed dataset before asking project questions."])
+        return Retrieval(
+            "No completed dataset records were found.",
+            "No completed project data is available for this query.",
+            [],
+            dataset_id,
+            ["Import a completed dataset before asking project questions."],
+        )
     sources: list[dict[str, str]] = []
     caveats = ["Results are grounded in stored snapshot data and model outputs."]
 
-    if parsed.intent == "rank_projects":
-        scored = [(snapshot, _latest_prediction(session, snapshot.id)) for snapshot in snapshots]
-        scored.sort(key=lambda pair: pair[1].overall_score if pair[1] and pair[1].overall_score is not None else Decimal("-1"), reverse=True)
+    if parsed.intent == "find_deteriorating_projects":
+        from ..services.trends import get_trends
+
+        items, _ = get_trends(session, limit=10, offset=0)
+        det = [
+            it
+            for it in items
+            if it["trend"] in ("deteriorating", "rapid_deterioration", "watch")
+        ]
+        if not det:
+            answer = "No deteriorating projects found in the stored snapshots."
+            context = answer
+        else:
+            lines = [
+                f"{it['project_code']} {it['project_name']} change {it['score_change']:+.1f} ({it['trend']})"
+                for it in det[:10]
+            ]
+            for it in det[:10]:
+                sources.append(_source("project", it["project_id"], it["project_code"]))
+            answer = "Deteriorating projects (by score increase):\n" + "\n".join(lines)
+            context = "\n".join(lines)
+        caveats.append(
+            "Trend thresholds: improving <=-5, stable -5..5, watch 5..10, deteriorating 10..20, rapid >20."
+        )
+    elif parsed.intent == "list_early_warnings":
+        from ..models import EarlyWarning
+        from ..services.early_warning import ensure_warnings
+
+        ensure_warnings(session)
+        warnings = session.scalars(
+            select(EarlyWarning).order_by(EarlyWarning.detected_at.desc()).limit(10)
+        ).all()
+        if not warnings:
+            answer = "No early warnings detected in the current snapshot."
+            context = answer
+        else:
+            lines = [
+                f"{w.type} {w.severity} — {w.title} (project {w.project_id})"
+                for w in warnings
+            ]
+            for w in warnings:
+                sources.append(_source("early_warning", w.id, w.type))
+            answer = "Recent early warnings:\n" + "\n".join(lines)
+            context = "\n".join(lines)
+    elif parsed.intent == "show_priority":
+        from ..services.intervention import list_priorities
+
+        items, _ = list_priorities(session, limit=10)
+        lines = [
+            f"#{it['rank']} {it['snapshot'].project.project_code} priority {it['priority']}"
+            for it in items
+        ]
+        for it in items:
+            sources.append(
+                _source(
+                    "project",
+                    it["snapshot"].project_id,
+                    it["snapshot"].project.project_code,
+                )
+            )
+        answer = "Intervention priority queue (top 10):\n" + "\n".join(lines)
+        context = "\n".join(lines)
+        caveats.append(
+            "Priority formula: 0.35*overall + 0.15*deterioration + 0.15*cost + 0.15*time + 0.10*exposure + 0.10*deviation."
+        )
+    elif parsed.intent == "show_cost_drivers":
+        from ..services.analytics_extra import cost_drivers
+
+        drivers = cost_drivers(session, limit=5)
+        lines = [f"{d['feature']} avg SHAP {d['average_shap']}" for d in drivers]
+        for d in drivers:
+            sources.append(_source("feature", d["feature"], d["feature"]))
+        answer = (
+            "Top cost drivers by average SHAP:\n" + "\n".join(lines)
+            if lines
+            else "No SHAP drivers stored."
+        )
+        context = "\n".join(lines) if lines else "No drivers"
+    elif parsed.intent == "rank_projects":
+        scored = [
+            (snapshot, _latest_prediction(session, snapshot.id))
+            for snapshot in snapshots
+        ]
+        scored.sort(
+            key=lambda pair: (
+                pair[1].overall_score
+                if pair[1] and pair[1].overall_score is not None
+                else Decimal("-1")
+            ),
+            reverse=True,
+        )
         rows = [(snapshot, prediction) for snapshot, prediction in scored[:10]]
         for snapshot, prediction in rows:
-            sources.append(_source("project", snapshot.project_id, snapshot.project.project_code))
-        lines = [f"{index}. {snapshot.project.project_code} - {snapshot.project_name}: {_score_text(prediction)}" for index, (snapshot, prediction) in enumerate(rows, 1)]
+            sources.append(
+                _source("project", snapshot.project_id, snapshot.project.project_code)
+            )
+        lines = [
+            f"{index}. {snapshot.project.project_code} - {snapshot.project_name}: {_score_text(prediction)}"
+            for index, (snapshot, prediction) in enumerate(rows, 1)
+        ]
         answer = "Highest stored risk projects:\n" + "\n".join(lines)
         context = "\n".join(lines)
     elif parsed.intent == "summarize_group":
@@ -117,48 +265,122 @@ def retrieve_context(session: Session, parsed: ParsedIntent, dataset_id: int | N
             group_field = "ministry"
         else:
             group_field = "sector"
-        selected = [snapshot for snapshot in snapshots if term is None or term.lower() in getattr(snapshot, group_field).lower()]
+        selected = [
+            snapshot
+            for snapshot in snapshots
+            if term is None or term.lower() in getattr(snapshot, group_field).lower()
+        ]
         if not selected:
-            return Retrieval("No matching group records were found.", f"I could not find a completed {group_field} matching '{term}'.", [], dataset_id, caveats)
-        predictions = [_latest_prediction(session, snapshot.id) for snapshot in selected]
-        scores = [prediction.overall_score for prediction in predictions if prediction and prediction.overall_score is not None]
+            return Retrieval(
+                "No matching group records were found.",
+                f"I could not find a completed {group_field} matching '{term}'.",
+                [],
+                dataset_id,
+                caveats,
+            )
+        predictions = [
+            _latest_prediction(session, snapshot.id) for snapshot in selected
+        ]
+        scores = [
+            prediction.overall_score
+            for prediction in predictions
+            if prediction and prediction.overall_score is not None
+        ]
         average = sum(scores) / len(scores) if scores else None
-        high = sum(prediction is not None and prediction.risk_band in {"high", "critical"} for prediction in predictions)
+        high = sum(
+            prediction is not None and prediction.risk_band in {"high", "critical"}
+            for prediction in predictions
+        )
         label = term or "the selected portfolio"
-        answer = f"{label}: {len(selected)} projects, {high} high or critical stored risks, and an average overall score of {average:.1f}/100." if average is not None else f"{label}: {len(selected)} projects were found, but stored overall risk scores are unavailable."
+        answer = (
+            f"{label}: {len(selected)} projects, {high} high or critical stored risks, and an average overall score of {average:.1f}/100."
+            if average is not None
+            else f"{label}: {len(selected)} projects were found, but stored overall risk scores are unavailable."
+        )
         context = answer
-        sources.extend(_source("snapshot", snapshot.id, snapshot.project.project_code) for snapshot in selected[:10])
+        sources.extend(
+            _source("snapshot", snapshot.id, snapshot.project.project_code)
+            for snapshot in selected[:10]
+        )
     else:
         subject, matches = _resolve_project(session, parsed.project_term, dataset_id)
         if subject is None:
             if not matches:
-                message = f"I could not find a unique project matching '{parsed.project_term}'." if parsed.project_term else "Name a project code or project name so I can identify the subject."
+                message = (
+                    f"I could not find a unique project matching '{parsed.project_term}'."
+                    if parsed.project_term
+                    else "Name a project code or project name so I can identify the subject."
+                )
             else:
                 message = f"I found {len(matches)} projects matching '{parsed.project_term}'. Please use the project code or a more specific name."
-            return Retrieval("Project resolution failed.", message, [], dataset_id, caveats)
+            return Retrieval(
+                "Project resolution failed.", message, [], dataset_id, caveats
+            )
         prediction = _latest_prediction(session, subject.id)
-        sources.append(_source("project", subject.project_id, subject.project.project_code))
+        sources.append(
+            _source("project", subject.project_id, subject.project.project_code)
+        )
         if parsed.intent == "explain_project":
-            explanations = session.scalars(select(RiskExplanation).where(RiskExplanation.prediction_id == prediction.id).order_by(RiskExplanation.shap_contribution.desc()).limit(5)).all() if prediction else []
-            drivers = ", ".join(f"{item.feature_name} ({item.shap_contribution:+.3f})" for item in explanations) or "no stored SHAP drivers"
+            explanations = (
+                session.scalars(
+                    select(RiskExplanation)
+                    .where(RiskExplanation.prediction_id == prediction.id)
+                    .order_by(RiskExplanation.shap_contribution.desc())
+                    .limit(5)
+                ).all()
+                if prediction
+                else []
+            )
+            drivers = (
+                ", ".join(
+                    f"{item.feature_name} ({item.shap_contribution:+.3f})"
+                    for item in explanations
+                )
+                or "no stored SHAP drivers"
+            )
             answer = f"{subject.project.project_code} has {_score_text(prediction)}. Stored model drivers: {drivers}."
             context = answer
             if prediction:
-                sources.append(_source("prediction", prediction.id, f"risk prediction for {subject.project.project_code}"))
-            caveats.append("SHAP contributions describe the component model output, not a percentage-point contribution to the blended score.")
+                sources.append(
+                    _source(
+                        "prediction",
+                        prediction.id,
+                        f"risk prediction for {subject.project.project_code}",
+                    )
+                )
+            caveats.append(
+                "SHAP contributions describe the component model output, not a percentage-point contribution to the blended score."
+            )
         else:
-            peers = [peer for peer in snapshots if peer.id != subject.id and peer.sector == subject.sector and peer.ministry == subject.ministry]
+            peers = [
+                peer
+                for peer in snapshots
+                if peer.id != subject.id
+                and peer.sector == subject.sector
+                and peer.ministry == subject.ministry
+            ]
             peer_predictions = [_latest_prediction(session, peer.id) for peer in peers]
-            peer_scores = [prediction.overall_score for prediction in peer_predictions if prediction and prediction.overall_score is not None]
+            peer_scores = [
+                prediction.overall_score
+                for prediction in peer_predictions
+                if prediction and prediction.overall_score is not None
+            ]
             answer = f"{subject.project.project_code} has {_score_text(prediction)}. Its comparable cohort contains {len(peers)} other projects."
             if peer_scores and prediction and prediction.overall_score is not None:
                 answer += f" The peer average stored score is {sum(peer_scores) / len(peer_scores):.1f}/100."
             else:
-                caveats.append("A comparable peer score is unavailable because the cohort is sparse or unscored.")
+                caveats.append(
+                    "A comparable peer score is unavailable because the cohort is sparse or unscored."
+                )
             context = answer
-            sources.extend(_source("project", peer.project_id, peer.project.project_code) for peer in peers[:10])
+            sources.extend(
+                _source("project", peer.project_id, peer.project.project_code)
+                for peer in peers[:10]
+            )
 
-    return Retrieval(context, answer, sources, dataset_id or snapshots[0].dataset_id, caveats)
+    return Retrieval(
+        context, answer, sources, dataset_id or snapshots[0].dataset_id, caveats
+    )
 
 
 def _groq_answer(question: str, retrieval: Retrieval) -> str:
@@ -166,22 +388,42 @@ def _groq_answer(question: str, retrieval: Retrieval) -> str:
     from langchain_groq import ChatGroq
 
     settings = get_settings()
-    model = ChatGroq(model=settings.groq_model, api_key=settings.groq_api_key, temperature=0, timeout=10, max_retries=1)
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", "Answer only from the supplied context. Do not invent project facts, scores, actions, or sources. Keep the answer concise and distinguish observations from estimates."),
-        ("human", "Question: {question}\nContext: {context}"),
-    ])
-    response = (prompt | model).invoke({"question": question, "context": retrieval.context})
+    model = ChatGroq(
+        model=settings.groq_model,
+        api_key=settings.groq_api_key,
+        temperature=0,
+        timeout=10,
+        max_retries=1,
+    )
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                "Answer only from the supplied context. Do not invent project facts, scores, actions, or sources. Keep the answer concise and distinguish observations from estimates.",
+            ),
+            ("human", "Question: {question}\nContext: {context}"),
+        ]
+    )
+    response = (prompt | model).invoke(
+        {"question": question, "context": retrieval.context}
+    )
     return str(response.content)
 
 
-def answer_question(session: Session, question: str, dataset_id: int | None, provider: Callable[[str, Retrieval], str] | None = None) -> tuple[Retrieval, str, str, str | None]:
+def answer_question(
+    session: Session,
+    question: str,
+    dataset_id: int | None,
+    provider: Callable[[str, Retrieval], str] | None = None,
+) -> tuple[Retrieval, str, str, str | None]:
     started_at = perf_counter()
     parsed = parse_intent(question)
     retrieval = retrieve_context(session, parsed, dataset_id)
     settings = get_settings()
 
-    def finish(result: Retrieval, answer: str, status: str, model: str | None) -> tuple[Retrieval, str, str, str | None]:
+    def finish(
+        result: Retrieval, answer: str, status: str, model: str | None
+    ) -> tuple[Retrieval, str, str, str | None]:
         logger.info(
             "assistant_request intent=%s provider_status=%s model=%s dataset_id=%s latency_ms=%.1f",
             parsed.intent,
@@ -193,11 +435,24 @@ def answer_question(session: Session, question: str, dataset_id: int | None, pro
         return result, answer, status, model
 
     if provider is not None:
-        return finish(retrieval, provider(question, retrieval), "groq", settings.groq_model)
+        return finish(
+            retrieval, provider(question, retrieval), "groq", settings.groq_model
+        )
     if not settings.assistant_enabled:
         return finish(retrieval, retrieval.answer, "disabled", None)
     try:
-        return finish(retrieval, _groq_answer(question, retrieval), "groq", settings.groq_model)
+        return finish(
+            retrieval, _groq_answer(question, retrieval), "groq", settings.groq_model
+        )
     except Exception:
-        retrieval = Retrieval(retrieval.context, retrieval.answer, retrieval.sources, retrieval.dataset_id, retrieval.caveats + ["Groq was unavailable; this response is the deterministic retrieved summary."])
+        retrieval = Retrieval(
+            retrieval.context,
+            retrieval.answer,
+            retrieval.sources,
+            retrieval.dataset_id,
+            retrieval.caveats
+            + [
+                "Groq was unavailable; this response is the deterministic retrieved summary."
+            ],
+        )
         return finish(retrieval, retrieval.answer, "fallback", settings.groq_model)

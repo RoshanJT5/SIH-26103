@@ -3,7 +3,16 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
-AssistantIntent = Literal["rank_projects", "explain_project", "summarize_group", "compare_peers"]
+AssistantIntent = Literal[
+    "rank_projects",
+    "explain_project",
+    "summarize_group",
+    "compare_peers",
+    "find_deteriorating_projects",
+    "list_early_warnings",
+    "show_priority",
+    "show_cost_drivers",
+]
 
 
 class AssistantQueryRequest(BaseModel):
