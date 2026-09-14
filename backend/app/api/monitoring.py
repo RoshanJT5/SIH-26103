@@ -29,9 +29,11 @@ from ..schemas.monitoring import (
     RiskExplanationItem,
     RiskExplanationResponse,
     RiskFields,
+    SnapshotComparisonResponse,
 )
 from ..services.features import derive_analytical_features
 from ..services.risk import benchmark
+from ..services.snapshot_comparison import compare_snapshots
 
 router = APIRouter(tags=["monitoring"])
 MAX_LIMIT = 500
@@ -71,7 +73,9 @@ def _risk_fields(prediction: RiskPrediction | None) -> RiskFields:
     )
 
 
-def _summary(snapshot: ProjectSnapshot, prediction: RiskPrediction | None) -> ProjectSummary:
+def _summary(
+    snapshot: ProjectSnapshot, prediction: RiskPrediction | None
+) -> ProjectSummary:
     return ProjectSummary(
         **_risk_fields(prediction).model_dump(),
         project_id=snapshot.project_id,
@@ -151,12 +155,18 @@ def _filtered_snapshots(
     ).all()
 
 
-def _validate_bounds(minimum: Decimal | None, maximum: Decimal | None, name: str) -> None:
+def _validate_bounds(
+    minimum: Decimal | None, maximum: Decimal | None, name: str
+) -> None:
     if minimum is not None and maximum is not None and minimum > maximum:
-        raise HTTPException(status_code=422, detail=f"{name}_min cannot exceed {name}_max.")
+        raise HTTPException(
+            status_code=422, detail=f"{name}_min cannot exceed {name}_max."
+        )
 
 
-def _matches_risk_band(session: Session, snapshot: ProjectSnapshot, risk_band: str | None) -> bool:
+def _matches_risk_band(
+    session: Session, snapshot: ProjectSnapshot, risk_band: str | None
+) -> bool:
     return risk_band is None or (
         (prediction := _latest_prediction(session, snapshot.id)) is not None
         and prediction.risk_band == risk_band
@@ -191,12 +201,25 @@ def list_projects(
         min_progress=min_progress,
         max_progress=max_progress,
     )
-    items = [(_summary(snapshot, _latest_prediction(db, snapshot.id))) for snapshot in snapshots]
+    items = [
+        (_summary(snapshot, _latest_prediction(db, snapshot.id)))
+        for snapshot in snapshots
+    ]
     if risk_band is not None:
         items = [item for item in items if item.risk_band == risk_band]
-    items.sort(key=lambda item: (item.overall_score is None, item.overall_score or Decimal("0"), item.project_id))
+    items.sort(
+        key=lambda item: (
+            item.overall_score is None,
+            item.overall_score or Decimal("0"),
+            item.project_id,
+        )
+    )
     dataset = items[0].dataset if items else None
-    return ProjectListResponse(items=items[offset : offset + limit], page=Page(offset=offset, limit=limit, total=len(items)), dataset=dataset)
+    return ProjectListResponse(
+        items=items[offset : offset + limit],
+        page=Page(offset=offset, limit=limit, total=len(items)),
+        dataset=dataset,
+    )
 
 
 @router.get("/projects/{project_id}", response_model=ProjectDetail)
@@ -210,7 +233,9 @@ def get_project(project_id: int, db: Session = Depends(get_db)) -> ProjectDetail
     )
     if snapshot is None:
         raise HTTPException(status_code=404, detail="Project not found.")
-    features = derive_analytical_features(snapshot, source_as_of_date=snapshot.dataset.source_as_of_date)
+    features = derive_analytical_features(
+        snapshot, source_as_of_date=snapshot.dataset.source_as_of_date
+    )
     return ProjectDetail(
         **_summary(snapshot, _latest_prediction(db, snapshot.id)).model_dump(),
         original_commissioning_date=snapshot.original_commissioning_date,
@@ -235,10 +260,14 @@ def _analytics(
 ) -> list[GroupAnalytics]:
     grouped: dict[str, list[ProjectSummary]] = {}
     for snapshot in snapshots:
-        grouped.setdefault(getattr(snapshot, attribute), []).append(_summary(snapshot, _latest_prediction(session, snapshot.id)))
+        grouped.setdefault(getattr(snapshot, attribute), []).append(
+            _summary(snapshot, _latest_prediction(session, snapshot.id))
+        )
     result = []
     for group, items in sorted(grouped.items()):
-        scores = [item.overall_score for item in items if item.overall_score is not None]
+        scores = [
+            item.overall_score for item in items if item.overall_score is not None
+        ]
         result.append(
             GroupAnalytics(
                 group=group,
@@ -267,10 +296,29 @@ def dashboard_summary(
 ) -> DashboardSummary:
     _validate_bounds(min_cost, max_cost, "cost")
     _validate_bounds(min_progress, max_progress, "progress")
-    snapshots = _filtered_snapshots(db, dataset_id=dataset_id, sector=sector, ministry=ministry, agency=agency, min_cost=min_cost, max_cost=max_cost, min_progress=min_progress, max_progress=max_progress)
-    snapshots = [snapshot for snapshot in snapshots if _matches_risk_band(db, snapshot, risk_band)]
-    items = [_summary(snapshot, _latest_prediction(db, snapshot.id)) for snapshot in snapshots]
-    revised = [item.revised_cost_cr for item in items if item.revised_cost_cr is not None]
+    snapshots = _filtered_snapshots(
+        db,
+        dataset_id=dataset_id,
+        sector=sector,
+        ministry=ministry,
+        agency=agency,
+        min_cost=min_cost,
+        max_cost=max_cost,
+        min_progress=min_progress,
+        max_progress=max_progress,
+    )
+    snapshots = [
+        snapshot
+        for snapshot in snapshots
+        if _matches_risk_band(db, snapshot, risk_band)
+    ]
+    items = [
+        _summary(snapshot, _latest_prediction(db, snapshot.id))
+        for snapshot in snapshots
+    ]
+    revised = [
+        item.revised_cost_cr for item in items if item.revised_cost_cr is not None
+    ]
     scores = [item.overall_score for item in items if item.overall_score is not None]
     return DashboardSummary(
         total_projects=len(items),
@@ -278,7 +326,9 @@ def dashboard_summary(
         high_risk_projects=sum(item.risk_band == "high" for item in items),
         critical_projects=sum(item.risk_band == "critical" for item in items),
         average_overall_score=None if not scores else sum(scores) / len(scores),
-        total_original_cost_cr=sum((item.original_cost_cr for item in items), Decimal("0")),
+        total_original_cost_cr=sum(
+            (item.original_cost_cr for item in items), Decimal("0")
+        ),
         total_revised_cost_cr=sum(revised, Decimal("0")),
         total_expenditure_cr=sum((item.expenditure_cr for item in items), Decimal("0")),
         dataset=items[0].dataset if items else None,
@@ -300,8 +350,22 @@ def sector_analytics(
 ) -> list[GroupAnalytics]:
     _validate_bounds(min_cost, max_cost, "cost")
     _validate_bounds(min_progress, max_progress, "progress")
-    snapshots = _filtered_snapshots(db, dataset_id=dataset_id, sector=sector, ministry=ministry, agency=agency, min_cost=min_cost, max_cost=max_cost, min_progress=min_progress, max_progress=max_progress)
-    snapshots = [snapshot for snapshot in snapshots if _matches_risk_band(db, snapshot, risk_band)]
+    snapshots = _filtered_snapshots(
+        db,
+        dataset_id=dataset_id,
+        sector=sector,
+        ministry=ministry,
+        agency=agency,
+        min_cost=min_cost,
+        max_cost=max_cost,
+        min_progress=min_progress,
+        max_progress=max_progress,
+    )
+    snapshots = [
+        snapshot
+        for snapshot in snapshots
+        if _matches_risk_band(db, snapshot, risk_band)
+    ]
     return _analytics(db, snapshots, "sector")
 
 
@@ -320,20 +384,59 @@ def ministry_analytics(
 ) -> list[GroupAnalytics]:
     _validate_bounds(min_cost, max_cost, "cost")
     _validate_bounds(min_progress, max_progress, "progress")
-    snapshots = _filtered_snapshots(db, dataset_id=dataset_id, sector=sector, ministry=ministry, agency=agency, min_cost=min_cost, max_cost=max_cost, min_progress=min_progress, max_progress=max_progress)
-    snapshots = [snapshot for snapshot in snapshots if _matches_risk_band(db, snapshot, risk_band)]
+    snapshots = _filtered_snapshots(
+        db,
+        dataset_id=dataset_id,
+        sector=sector,
+        ministry=ministry,
+        agency=agency,
+        min_cost=min_cost,
+        max_cost=max_cost,
+        min_progress=min_progress,
+        max_progress=max_progress,
+    )
+    snapshots = [
+        snapshot
+        for snapshot in snapshots
+        if _matches_risk_band(db, snapshot, risk_band)
+    ]
     return _analytics(db, snapshots, "ministry")
 
 
 @router.get("/analytics/benchmarks", response_model=BenchmarkResponse)
-def project_benchmark(project_id: int, minimum_peers: Annotated[int, Query(ge=1, le=100)] = 10, db: Session = Depends(get_db)) -> BenchmarkResponse:
+def project_benchmark(
+    project_id: int,
+    minimum_peers: Annotated[int, Query(ge=1, le=100)] = 10,
+    db: Session = Depends(get_db),
+) -> BenchmarkResponse:
     detail = get_project(project_id, db)
-    subject = db.scalar(select(ProjectSnapshot).where(ProjectSnapshot.id == detail.snapshot_id))
+    subject = db.scalar(
+        select(ProjectSnapshot).where(ProjectSnapshot.id == detail.snapshot_id)
+    )
     if subject is None:
         raise HTTPException(status_code=404, detail="Project snapshot not found.")
-    all_snapshots = _filtered_snapshots(db, dataset_id=subject.dataset_id, sector=None, ministry=None, agency=None, min_cost=None, max_cost=None, min_progress=None, max_progress=None)
-    peers = [(item, prediction) for item in all_snapshots if (prediction := _latest_prediction(db, item.id)) is not None]
-    result = benchmark(subject, peers, subject_prediction=_latest_prediction(db, subject.id), minimum_peers=minimum_peers)
+    all_snapshots = _filtered_snapshots(
+        db,
+        dataset_id=subject.dataset_id,
+        sector=None,
+        ministry=None,
+        agency=None,
+        min_cost=None,
+        max_cost=None,
+        min_progress=None,
+        max_progress=None,
+    )
+    peers = [
+        (item, prediction)
+        for item in all_snapshots
+        if (prediction := _latest_prediction(db, item.id)) is not None
+    ]
+    result = benchmark(
+        subject,
+        peers,
+        subject_prediction=_latest_prediction(db, subject.id),
+        minimum_peers=minimum_peers,
+    )
     return BenchmarkResponse(project_id=project_id, **result.__dict__)
 
 
@@ -353,8 +456,18 @@ def risk_projects(
     db: Session = Depends(get_db),
 ) -> ProjectListResponse:
     return list_projects(
-        dataset_id, sector, ministry, agency, risk_band, min_cost, max_cost,
-        min_progress, max_progress, offset, limit, db,
+        dataset_id,
+        sector,
+        ministry,
+        agency,
+        risk_band,
+        min_cost,
+        max_cost,
+        min_progress,
+        max_progress,
+        offset,
+        limit,
+        db,
     )
 
 
@@ -363,14 +476,20 @@ def risk_project(project_id: int, db: Session = Depends(get_db)) -> ProjectDetai
     return get_project(project_id, db)
 
 
-@router.get("/risk/projects/{project_id}/explanation", response_model=RiskExplanationResponse)
-def risk_explanation(project_id: int, db: Session = Depends(get_db)) -> RiskExplanationResponse:
+@router.get(
+    "/risk/projects/{project_id}/explanation", response_model=RiskExplanationResponse
+)
+def risk_explanation(
+    project_id: int, db: Session = Depends(get_db)
+) -> RiskExplanationResponse:
     detail = get_project(project_id, db)
     if detail.prediction_id is None:
         raise HTTPException(status_code=404, detail="Risk prediction not found.")
     prediction = db.get(RiskPrediction, detail.prediction_id)
     explanations = db.scalars(
-        select(RiskExplanation).where(RiskExplanation.prediction_id == detail.prediction_id).order_by(RiskExplanation.shap_contribution.desc())
+        select(RiskExplanation)
+        .where(RiskExplanation.prediction_id == detail.prediction_id)
+        .order_by(RiskExplanation.shap_contribution.desc())
     ).all()
     return RiskExplanationResponse(
         prediction_id=prediction.id,
@@ -378,14 +497,18 @@ def risk_explanation(project_id: int, db: Session = Depends(get_db)) -> RiskExpl
         rule_version=prediction.rule_version,
         overall_score=prediction.overall_score,
         risk_band=prediction.risk_band,
-        explanations=[RiskExplanationItem.model_validate(item) for item in explanations],
+        explanations=[
+            RiskExplanationItem.model_validate(item) for item in explanations
+        ],
     )
 
 
 @router.get("/alerts", response_model=AlertListResponse)
 def list_alerts(
     status: str | None = Query(default=None, pattern="^(open|acknowledged|closed)$"),
-    severity: str | None = Query(default=None, pattern="^(normal|watch|high|critical)$"),
+    severity: str | None = Query(
+        default=None, pattern="^(normal|watch|high|critical)$"
+    ),
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=MAX_LIMIT)] = 100,
     db: Session = Depends(get_db),
@@ -399,4 +522,34 @@ def list_alerts(
         conditions.append(Alert.severity == severity)
     alerts = db.scalars(query.where(*conditions).offset(offset).limit(limit)).all()
     total = db.scalar(count_query.where(*conditions)) or 0
-    return AlertListResponse(items=[AlertResponse.model_validate(alert) for alert in alerts], page=Page(offset=offset, limit=limit, total=total))
+    return AlertListResponse(
+        items=[AlertResponse.model_validate(alert) for alert in alerts],
+        page=Page(offset=offset, limit=limit, total=total),
+    )
+
+
+@router.get(
+    "/monitoring/snapshot-comparison",
+    response_model=SnapshotComparisonResponse,
+    summary="Compare two monitoring snapshots",
+    description="Compares the current completed dataset against a previous one, matched by stable "
+    "project_id. Reports portfolio deltas, risk movements (new high/critical, improved, "
+    "deteriorated), related warnings, and per-dataset score history. Returns an unavailable "
+    "reason instead of deltas when only one completed snapshot exists.",
+)
+def snapshot_comparison(
+    current_dataset_id: int | None = None,
+    previous_dataset_id: int | None = None,
+    sector: str | None = None,
+    ministry: str | None = None,
+    risk_band: str | None = Query(default=None, pattern="^(low|medium|high|critical)$"),
+    db: Session = Depends(get_db),
+) -> SnapshotComparisonResponse:
+    return compare_snapshots(
+        db,
+        current_dataset_id=current_dataset_id,
+        previous_dataset_id=previous_dataset_id,
+        sector=sector,
+        ministry=ministry,
+        risk_band=risk_band,
+    )

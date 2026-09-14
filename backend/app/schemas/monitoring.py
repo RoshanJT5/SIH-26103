@@ -133,3 +133,63 @@ class AlertResponse(BaseModel):
 class AlertListResponse(BaseModel):
     items: list[AlertResponse]
     page: Page
+
+
+class DatasetRef(BaseModel):
+    dataset_id: int
+    source_name: str
+    source_as_of_date: date | None
+    imported_at: datetime
+    status: str
+
+
+class PortfolioDelta(BaseModel):
+    project_count: int
+    project_count_change: int | None = None
+    high_risk_projects: int
+    high_risk_change: int | None = None
+    critical_projects: int
+    critical_change: int | None = None
+    average_overall_score: Decimal | None = None
+    average_score_change: Decimal | None = None
+    total_revised_cost_cr: Decimal
+    revised_cost_change: Decimal | None = None
+    total_expenditure_cr: Decimal
+    expenditure_change: Decimal | None = None
+
+
+class ProjectMovement(BaseModel):
+    project_id: int
+    project_code: str
+    project_name: str
+    sector: str
+    ministry: str
+    previous_score: Decimal | None = None
+    current_score: Decimal | None = None
+    score_change: Decimal | None = None
+    previous_band: str | None = None
+    current_band: str | None = None
+
+
+class ScoreHistoryPoint(BaseModel):
+    dataset_id: int
+    source_name: str
+    source_as_of_date: date | None = None
+    project_count: int
+    average_overall_score: Decimal | None = None
+    high_risk_projects: int
+    critical_projects: int
+
+
+class SnapshotComparisonResponse(BaseModel):
+    version: str
+    current_dataset: DatasetRef
+    previous_dataset: DatasetRef | None = None
+    portfolio: PortfolioDelta
+    new_high_risk_projects: list[ProjectMovement] = []
+    new_critical_projects: list[ProjectMovement] = []
+    improved_projects: list[ProjectMovement] = []
+    deteriorated_projects: list[ProjectMovement] = []
+    new_warnings: list[AlertResponse] = []
+    score_history: list[ScoreHistoryPoint] = []
+    unavailable_reason: str | None = None
