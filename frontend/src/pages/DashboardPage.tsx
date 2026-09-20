@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
-import { formatCrore, formatNumber, getJson, type AssistantResponse, type Dashboard } from "../api";
+import { formatCrore, formatNumber, getJson, API_URL, type AssistantResponse, type Dashboard } from "../api";
+
 
 export default function DashboardPage() {
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
@@ -25,7 +26,8 @@ export default function DashboardPage() {
 
   async function ask(e: FormEvent) {
     e.preventDefault(); if (!q.trim()) return; setAsking(true);
-    try { const res = await fetch(`${import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api"}/assistant/query`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: q }) }); if (!res.ok) throw new Error(`Assistant request failed (${res.status})`); setAnswer(await res.json()); } catch (err) { setAnswer({ answer: err instanceof Error ? err.message : "Assistant unavailable.", intent: "unknown", sources: [], provider_status: "disabled", caveats: [] }); } finally { setAsking(false); }
+    try { const res = await fetch(`${API_URL}/assistant/query`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: q }) }); if (!res.ok) throw new Error(`Assistant request failed (${res.status})`); setAnswer(await res.json()); } catch (err) { setAnswer({ answer: err instanceof Error ? err.message : "Assistant unavailable.", intent: "unknown", sources: [], provider_status: "disabled", caveats: [] }); } finally { setAsking(false); }
+
   }
 
   return (

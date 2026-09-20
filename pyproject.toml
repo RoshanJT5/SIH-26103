@@ -1,0 +1,28 @@
+[project]
+name = "sih-26103"
+version = "0.1.0"
+description = "Infrastructure Project Monitoring and Early Warning System"
+requires-python = ">=3.12, <3.13"
+dependencies = [
+    "alembic>=1.14.0",
+    "fastapi>=0.115.0",
+    "httpx>=0.28.0",
+    "langchain-core>=0.3.0",
+    "langchain-groq>=0.2.0",
+    "joblib>=1.4.0",
+    "numpy>=1.26.0",
+    "pandas>=2.2.0",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.7.0",
+    "python-dotenv>=1.0.0",
+    "python-multipart>=0.0.12",
+    "scikit-learn>=1.5.0",
+    "SQLAlchemy>=2.0.0",
+    "uvicorn[standard]>=0.32.0",
+    "xgboost>=2.1.0",
+    "shap>=0.46.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"

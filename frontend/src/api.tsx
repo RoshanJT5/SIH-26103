@@ -39,7 +39,9 @@ export type SnapshotComparison = {
   unavailable_reason: string | null;
 };
 
-export const API_URL = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api";
+const configuredApiUrl = (import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api").trim().replace(/\/+$/, "");
+export const API_URL = configuredApiUrl.endsWith("/api") ? configuredApiUrl : `${configuredApiUrl}/api`;
+
 export const bandColors: Record<string, string> = { low: "#16803C", medium: "#E8890C", high: "#C0531A", critical: "#C53030" };
 
 export function formatNumber(value: number | null | undefined, digits = 0) {
