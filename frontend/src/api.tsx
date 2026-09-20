@@ -57,14 +57,82 @@ export type CostDriver = { feature:string; average_shap:number; coverage:number;
 export type Forecast = { project_id:number; project_code:string; methodology:string; limitations:string[]; points:{dataset_id:number|null; source_as_of_date:string|null; overall_score:number|null; is_forecast:boolean; method:string}[]};
 export type Recommendations = { project_id:number; project_code:string; methodology:string; items:{priority:number; action:string; rationale:string; evidence:string}[]; limitations:string[]};
 export type Confidence = { project_id:number; confidence:number|null; probability:number|null; data_quality:string; data_quality_score:number|null; limitations:string[]; unavailable_reasons:Record<string,string>; availability_status:string};
+import { getToken } from "./utils/auth";
+
+export interface AuthUser {
+  name: string;
+  email: string;
+  username: string;
+  role?: string;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  user: AuthUser;
+}
+
+export interface RouteAccessResponse {
+  route: string;
+  is_protected: boolean;
+  allowed: boolean;
+  destination?: string;
+  redirect_url?: string;
+  reason?: string;
+  user?: AuthUser;
+}
+
 export async function getJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`);
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  const response = await fetch(`${API_URL}${path}`, { headers });
   if (!response.ok) throw new Error(`Request failed (${response.status})`);
   return response.json() as Promise<T>;
 }
+
 export async function postJson<T>(path: string, body: unknown): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body)});
-  if (!response.ok) throw new Error(`Request failed (${response.status})`);
+  const token = getToken();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  const response = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    let detail = `Request failed (${response.status})`;
+    try {
+      const err = await response.json();
+      if (err?.detail) detail = err.detail;
+    } catch {
+      // ignore
+    }
+    throw new Error(detail);
+  }
   return response.json() as Promise<T>;
 }
+
+export async function loginApi(usernameOrEmail: string, password: string): Promise<AuthResponse> {
+  return postJson<AuthResponse>("/auth/login", {
+    username: usernameOrEmail,
+    password,
+  });
+}
+
+export async function signupApi(name: string, email: string, password: string, username?: string): Promise<AuthResponse> {
+  return postJson<AuthResponse>("/auth/signup", {
+    name,
+    email,
+    password,
+    username: username || name.toLowerCase().replace(/\s+/g, "_"),
+  });
+}
+
 export function Band({ band }: { band: string | null }) { return <span className={`band band-${band ?? "unknown"}`}><i aria-hidden="true" />{band ?? "Unavailable"}</span>; }
+

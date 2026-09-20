@@ -41,6 +41,7 @@ const TOP: (NavItem | Drop)[] = [
   { to: "/simulation", label: "Simulation" },
   { to: "/documents", label: "Documents" },
   { to: "/updates", label: "Updates" },
+  { to: "/faq", label: "FAQ" },
   { to: "/help", label: "Help" },
 ];
 
@@ -93,6 +94,7 @@ export default function GovLayout() {
   const closeTimer = useRef<number | null>(null);
   const location = useLocation();
   const breadcrumbLabel = (() => {
+    if (location.pathname.startsWith("/faq")) return "FAQ";
     if (location.pathname.startsWith("/updates")) return "Updates";
     if (location.pathname.startsWith("/monitoring")) return "Monitoring";
     if (location.pathname.startsWith("/early-warnings")) return "Early Warnings";
@@ -123,7 +125,7 @@ export default function GovLayout() {
             <button type="button">हिन्दी</button><button type="button" aria-current="true">English</button>
             <span className="utility-sep hide-sm" aria-hidden="true">|</span>
             <button type="button" onClick={() => document.documentElement.classList.toggle("high-contrast")}>Accessibility</button>
-            <a className="hide-sm" href="/help">Help</a><a className="hide-sm" href="#footer">Contact</a>
+            <a className="hide-sm" href="/faq">FAQ</a><a className="hide-sm" href="/help">Help</a><a className="hide-sm" href="#footer">Contact</a>
           </div>
         </div>
       </div>
@@ -212,7 +214,7 @@ export default function GovLayout() {
                       onClick={() => {
                         setProfileOpen(false);
                         logout();
-                        navigate("/");
+                        navigate("/login");
                       }}
                     >
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -258,6 +260,7 @@ export default function GovLayout() {
             <NavLink to="/simulation" onClick={() => setMobileNav(false)}>Simulation</NavLink>
             <NavLink to="/documents" onClick={() => setMobileNav(false)}>Documents</NavLink>
             <NavLink to="/updates" onClick={() => setMobileNav(false)}>Updates</NavLink>
+            <NavLink to="/faq" onClick={() => setMobileNav(false)}>FAQ</NavLink>
             <NavLink to="/help" onClick={() => setMobileNav(false)}>Help</NavLink>
             <div className="mobile-actions">
               {user ? (
@@ -291,7 +294,7 @@ export default function GovLayout() {
                       onClick={() => {
                         setMobileNav(false);
                         logout();
-                        navigate("/");
+                        navigate("/login");
                       }}
                     >
                       Sign Out
@@ -314,7 +317,7 @@ export default function GovLayout() {
       </main>
       <footer className="site-footer" id="footer">
         <div className="wrap">
-          <div className="footer-grid"><div><h2>Infrastructure Project Monitoring Portal</h2><p>SIH 26103 Prototype</p><p>“This prototype demonstrates digital monitoring, risk visibility and evidence-based decision support.”</p><p className="footer-teal">Prototype — not an official Government of India website.</p></div><nav aria-label="Platform"><h3>Platform</h3><ul><li><NavLink to="/">Home</NavLink></li><li><NavLink to="/dashboard">Dashboard</NavLink></li><li><NavLink to="/projects">Projects</NavLink></li><li><NavLink to="/analytics">Analytics</NavLink></li><li><NavLink to="/documents">Documents</NavLink></li></ul></nav><nav aria-label="Information"><h3>Information</h3><ul><li><NavLink to="/help">Accessibility</NavLink></li><li><NavLink to="/help">Help</NavLink></li><li><a href="#footer">Contact</a></li><li><NavLink to="/documents">Sitemap</NavLink></li></ul></nav><nav aria-label="Policies"><h3>Policies</h3><ul><li><NavLink to="/help">Privacy</NavLink></li><li><NavLink to="/help">Terms of Use</NavLink></li><li><NavLink to="/help">Accessibility Statement</NavLink></li><li><NavLink to="/help">Data Policy</NavLink></li></ul></nav></div>
+          <div className="footer-grid"><div><h2>Infrastructure Project Monitoring Portal</h2><p>SIH 26103 Prototype</p><p>“This prototype demonstrates digital monitoring, risk visibility and evidence-based decision support.”</p><p className="footer-teal">Prototype — not an official Government of India website.</p></div><nav aria-label="Platform"><h3>Platform</h3><ul><li><NavLink to="/">Home</NavLink></li><li><NavLink to="/dashboard">Dashboard</NavLink></li><li><NavLink to="/projects">Projects</NavLink></li><li><NavLink to="/analytics">Analytics</NavLink></li><li><NavLink to="/documents">Documents</NavLink></li></ul></nav><nav aria-label="Information"><h3>Information</h3><ul><li><NavLink to="/help">Accessibility</NavLink></li><li><NavLink to="/faq">FAQs</NavLink></li><li><NavLink to="/help">Help</NavLink></li><li><a href="#footer">Contact</a></li><li><NavLink to="/documents">Sitemap</NavLink></li></ul></nav><nav aria-label="Policies"><h3>Policies</h3><ul><li><NavLink to="/help">Privacy</NavLink></li><li><NavLink to="/help">Terms of Use</NavLink></li><li><NavLink to="/help">Accessibility Statement</NavLink></li><li><NavLink to="/help">Data Policy</NavLink></li></ul></nav></div>
           <div className="footer-bottom"><span>© 2026 SIH 26103 Prototype · For demonstration purposes only · Last Updated: 14 September 2026</span><span>English / हिन्दी ready · No certification claimed</span></div>
         </div>
       </footer>
