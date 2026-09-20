@@ -213,10 +213,14 @@ def test_user_persisted_in_database():
 
 
 def test_profile_update_persists_in_db_and_across_relogin():
+    import time
     from backend.app.db.session import SessionLocal
     from backend.app.models.user import User
 
-    unique_email = "relogin.officer@gov.in"
+    ts = int(time.time() * 1000)
+    unique_email = f"relogin_{ts}@gov.in"
+    orig_username = f"orig_{ts}"
+    new_username = f"new_{ts}"
     password = "persisted_pass_123"
 
     with TestClient(app) as client:
@@ -227,13 +231,13 @@ def test_profile_update_persists_in_db_and_across_relogin():
                 "name": "Original Name",
                 "email": unique_email,
                 "password": password,
-                "username": "orig_username",
+                "username": orig_username,
             },
         )
         assert signup_res.status_code == 200
         token = signup_res.json()["access_token"]
         assert signup_res.json()["user"]["name"] == "Original Name"
-        assert signup_res.json()["user"]["username"] == "orig_username"
+        assert signup_res.json()["user"]["username"] == orig_username
 
         authed_client = TestClient(app, headers={"Authorization": f"Bearer {token}"})
 
@@ -242,19 +246,19 @@ def test_profile_update_persists_in_db_and_across_relogin():
             "/api/auth/me",
             json={
                 "name": "Updated Full Name",
-                "username": "new_awesome_username",
+                "username": new_username,
                 "email": unique_email,
             },
         )
         assert update_res.status_code == 200
         assert update_res.json()["name"] == "Updated Full Name"
-        assert update_res.json()["username"] == "new_awesome_username"
+        assert update_res.json()["username"] == new_username
 
         # 3. GET /api/auth/me immediately reflects changes
         me_res = authed_client.get("/api/auth/me")
         assert me_res.status_code == 200
         assert me_res.json()["name"] == "Updated Full Name"
-        assert me_res.json()["username"] == "new_awesome_username"
+        assert me_res.json()["username"] == new_username
 
         # 4. Directly query database to guarantee persistence in SQL table
         db = SessionLocal()
@@ -262,7 +266,7 @@ def test_profile_update_persists_in_db_and_across_relogin():
             db_user = db.query(User).filter_by(email=unique_email).first()
             assert db_user is not None
             assert db_user.name == "Updated Full Name"
-            assert db_user.username == "new_awesome_username"
+            assert db_user.username == new_username
         finally:
             db.close()
 
@@ -270,7 +274,7 @@ def test_profile_update_persists_in_db_and_across_relogin():
         new_login_res = client.post(
             "/api/auth/login",
             json={
-                "username": "new_awesome_username",
+                "username": new_username,
                 "password": password,
             },
         )
@@ -278,7 +282,8 @@ def test_profile_update_persists_in_db_and_across_relogin():
         logged_in_user = new_login_res.json()["user"]
         # Must show the NEW name, not the old name!
         assert logged_in_user["name"] == "Updated Full Name"
-        assert logged_in_user["username"] == "new_awesome_username"
+        assert logged_in_user["username"] == new_username
+
 
         # 6. Also verify logging in with email returns the new name and username
         email_login_res = client.post(
@@ -290,4 +295,4 @@ def test_profile_update_persists_in_db_and_across_relogin():
         )
         assert email_login_res.status_code == 200
         assert email_login_res.json()["user"]["name"] == "Updated Full Name"
-        assert email_login_res.json()["user"]["username"] == "new_awesome_username"
+        assert email_login_res.json()["user"]["username"] == new_username

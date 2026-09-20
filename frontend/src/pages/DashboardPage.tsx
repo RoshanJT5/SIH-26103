@@ -1,7 +1,9 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
-import { formatCrore, formatNumber, getJson, API_URL, type AssistantResponse, type Dashboard } from "../api";
+import { formatCrore, formatNumber, getJson, initializeDemoApi, API_URL, type AssistantResponse, type Dashboard } from "../api";
+import CreateProjectModal from "../components/CreateProjectModal";
+import UploadDatasetModal from "../components/UploadDatasetModal";
 
 
 export default function DashboardPage() {
@@ -16,13 +18,35 @@ export default function DashboardPage() {
   const [warnings,setWarnings]=useState<any>(null);
   const [drivers,setDrivers]=useState<any>(null);
 
-  useEffect(() => {
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [initializingDemo, setInitializingDemo] = useState(false);
+
+  const loadData = () => {
+    setLoading(true);
     getJson<Dashboard>("/dashboard/summary").then(setDashboard).catch((e: Error) => setError(e.message)).finally(() => setLoading(false));
     getJson<any>("/risk/trends?limit=5").then(setTrends).catch(()=>null);
     getJson<any>("/interventions/priority?limit=5").then(setPriority).catch(()=>null);
     getJson<any>("/early-warnings?limit=5").then(setWarnings).catch(()=>null);
     getJson<any>("/analytics/cost-drivers?limit=5").then(setDrivers).catch(()=>null);
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
+
+  const handleInitDemo = async () => {
+    setInitializingDemo(true);
+    setError("");
+    try {
+      await initializeDemoApi();
+      loadData();
+    } catch (err: any) {
+      setError(err?.message || "Failed to initialize demo MoSPI portfolio.");
+    } finally {
+      setInitializingDemo(false);
+    }
+  };
 
   async function ask(e: FormEvent) {
     e.preventDefault(); if (!q.trim()) return; setAsking(true);
@@ -32,8 +56,49 @@ export default function DashboardPage() {
 
   return (
     <section className="section" aria-labelledby="t"><div className="wrap">
-      <div className="section-head"><p className="section-eyebrow">Monitoring · Dashboard — 10-block portfolio</p><h2 id="t">Portfolio risk dashboard</h2><p>Live from /dashboard/summary and six supporting endpoints. All blocks read live backend.</p></div>
+      <div className="section-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
+        <div>
+          <p className="section-eyebrow">Monitoring · Dashboard — 10-block portfolio</p>
+          <h2 id="t">Portfolio risk dashboard</h2>
+          <p>Live from /dashboard/summary and six supporting endpoints. All blocks read live backend.</p>
+        </div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setIsUploadOpen(true)}
+            style={{ fontSize: "0.85rem", padding: "8px 14px" }}
+          >
+            📁 Ingest Dataset
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => setIsCreateOpen(true)}
+            style={{ fontSize: "0.85rem", padding: "8px 14px" }}
+          >
+            ➕ Register New Project
+          </button>
+        </div>
+      </div>
       {error && <div className="alert alert-error" role="alert">{error}</div>}
+
+      {!loading && dashboard && dashboard.total_projects === 0 && (
+        <div className="zero-banner">
+          <div className="zero-banner-content">
+            <h4>No Infrastructure Projects in Database</h4>
+            <p>Load the official 1,775-project MoSPI baseline repository with pre-trained models and warnings.</p>
+          </div>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={handleInitDemo}
+            disabled={initializingDemo}
+          >
+            {initializingDemo ? "Initializing MoSPI Baseline…" : "Load Baseline MoSPI Dataset"}
+          </button>
+        </div>
+      )}
       {loading ? <div className="panel loading" role="status"><span className="spinner" />Loading summary…</div> : dashboard && (
         <>
           <div className="card-grid" style={{marginBottom:16}}>
@@ -59,6 +124,22 @@ export default function DashboardPage() {
         </>
       )}
       <section className="panel" id="assistant" style={{ marginTop: 16 }} aria-labelledby="a"><div className="panel-head"><div><p className="section-eyebrow">Grounded assistant</p><h3 id="a">Ask the portfolio — POST /assistant/query</h3></div></div><div style={{ padding: 16 }}><p style={{fontSize:"0.8rem", color:"#52606D"}}>New intents: find_deteriorating_projects, list_early_warnings, show_priority, show_cost_drivers.</p><form className="assistant-form" onSubmit={ask} role="search"><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Try: find deteriorating projects" aria-label="Ask the portfolio assistant" /><button className="btn btn-primary" disabled={asking}>{asking ? "Thinking…" : "Ask"}</button></form>{answer && <div className="assistant-answer" role="status"><p>{answer.answer}</p><div className="assistant-meta"><span>{answer.provider_status}</span><span>{answer.sources.length} sources</span><span>{answer.intent}</span></div>{answer.caveats.map((c) => <small key={c} style={{ display: "block" }}>{c}</small>)}</div>}</div></section>
+
+      <CreateProjectModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onCreated={() => {
+          loadData();
+        }}
+      />
+
+      <UploadDatasetModal
+        isOpen={isUploadOpen}
+        onClose={() => setIsUploadOpen(false)}
+        onUploaded={() => {
+          loadData();
+        }}
+      />
     </div></section>
   );
 }

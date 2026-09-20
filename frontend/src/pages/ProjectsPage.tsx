@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Band, formatNumber, formatPercent, getJson, type Project } from "../api";
+import { Band, formatNumber, formatPercent, getJson, initializeDemoApi, type Project } from "../api";
+import CreateProjectModal from "../components/CreateProjectModal";
+import UploadDatasetModal from "../components/UploadDatasetModal";
 
 export default function ProjectsPage() {
   const [params, setParams] = useSearchParams();
@@ -12,7 +14,11 @@ export default function ProjectsPage() {
   const band = params.get("risk_band") ?? "";
   const [search, setSearch] = useState(params.get("q") ?? "");
 
-  useEffect(() => {
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [initializingDemo, setInitializingDemo] = useState(false);
+
+  const fetchProjects = useCallback(() => {
     setLoading(true);
     const qp = new URLSearchParams({ limit: "500" });
     if (sector) qp.set("sector", sector);
@@ -26,12 +32,71 @@ export default function ProjectsPage() {
       .finally(() => setLoading(false));
   }, [sector, band]);
 
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
+
+  const handleInitDemo = async () => {
+    setInitializingDemo(true);
+    setError("");
+    try {
+      await initializeDemoApi();
+      fetchProjects();
+    } catch (err: any) {
+      setError(err?.message || "Failed to initialize demo MoSPI portfolio.");
+    } finally {
+      setInitializingDemo(false);
+    }
+  };
+
   const visible = projects.filter((p) => !search || `${p.project_name} ${p.project_code} ${p.sector}`.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <section className="section" aria-labelledby="t">
       <div className="wrap">
-        <div className="section-head"><p className="section-eyebrow">Projects</p><h2 id="t">Project records</h2><p>Live from <code>GET /projects</code> and <code>GET /risk/projects</code>. Select a row to open its detail page.</p></div>
+        <div className="section-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
+          <div>
+            <p className="section-eyebrow">Projects</p>
+            <h2 id="t">Infrastructure Project Records</h2>
+            <p>Real-time MoSPI monitoring repository with ML risk categorization. Select a project to inspect details.</p>
+          </div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setIsUploadOpen(true)}
+              style={{ fontSize: "0.85rem", padding: "8px 14px" }}
+            >
+              📁 Ingest Dataset
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => setIsCreateOpen(true)}
+              style={{ fontSize: "0.85rem", padding: "8px 14px" }}
+            >
+              ➕ Register New Project
+            </button>
+          </div>
+        </div>
+
+        {!loading && projects.length === 0 && (
+          <div className="zero-banner">
+            <div className="zero-banner-content">
+              <h4>No Infrastructure Projects Loaded</h4>
+              <p>Initialize the official MoSPI repository containing 1,775 baseline central projects or register a new project.</p>
+            </div>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleInitDemo}
+              disabled={initializingDemo}
+            >
+              {initializingDemo ? "Initializing MoSPI Baseline…" : "Load Baseline MoSPI Dataset"}
+            </button>
+          </div>
+        )}
+
         <div className="filters" role="search" aria-label="Filter projects">
           <div className="field search-field"><span><label htmlFor="q">Search</label></span><input id="q" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Name, code or sector" /></div>
           <div className="field"><span><label htmlFor="sector">Sector</label></span>
@@ -62,6 +127,22 @@ export default function ProjectsPage() {
             ))}</tbody>
           </table></div></div>
         )}
+
+        <CreateProjectModal
+          isOpen={isCreateOpen}
+          onClose={() => setIsCreateOpen(false)}
+          onCreated={() => {
+            fetchProjects();
+          }}
+        />
+
+        <UploadDatasetModal
+          isOpen={isUploadOpen}
+          onClose={() => setIsUploadOpen(false)}
+          onUploaded={() => {
+            fetchProjects();
+          }}
+        />
       </div>
     </section>
   );

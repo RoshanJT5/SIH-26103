@@ -27,12 +27,18 @@ from .db.session import engine
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     # Ensure database connection and initialize tables if not present
-    with engine.connect():
-        pass
     from .db.base import Base
     from . import models  # noqa: F401
     Base.metadata.create_all(bind=engine)
+    from .db.session import SessionLocal
+    from .services.dataset_init import ensure_demo_dataset_loaded
+    try:
+        with SessionLocal() as session:
+            ensure_demo_dataset_loaded(session)
+    except Exception:
+        pass
     yield
+
 
 
 settings = get_settings()

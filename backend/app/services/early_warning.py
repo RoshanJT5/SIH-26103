@@ -205,7 +205,11 @@ def ensure_warnings(session, limit=1000):
                 deduplication_key=dk,
             )
             session.add(ew)
-    session.flush()
+    try:
+        session.commit()
+    except Exception:
+        session.rollback()
+
 
 
 def enriched(session, ew):

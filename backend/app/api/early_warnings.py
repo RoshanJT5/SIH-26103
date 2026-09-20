@@ -1,9 +1,9 @@
-from typing import Annotated
+from typing import Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 from ..db.session import get_db
-from ..core.auth import get_admin_user
+from ..core.auth import get_current_user
 from ..models import EarlyWarning
 from ..schemas.early_warnings import (
     EarlyWarningResponse,
@@ -73,7 +73,7 @@ def get_warning(warning_id: int, db: Session = Depends(get_db)):
 def acknowledge(
     warning_id: int,
     db: Session = Depends(get_db),
-    _admin: str = Depends(get_admin_user),
+    _user: dict[str, Any] = Depends(get_current_user),
 ):
     ew = db.get(EarlyWarning, warning_id)
     if not ew:
@@ -83,7 +83,8 @@ def acknowledge(
             status_code=422, detail="Closed warning cannot be acknowledged."
         )
     ew.status = "acknowledged"
-    db.flush()
+    db.commit()
+    db.refresh(ew)
     extra = enriched(db, ew)
     return EarlyWarningResponse.model_validate(
         {**{c.name: getattr(ew, c.name) for c in ew.__table__.columns}, **extra}
@@ -94,14 +95,16 @@ def acknowledge(
 def close_warning(
     warning_id: int,
     db: Session = Depends(get_db),
-    _admin: str = Depends(get_admin_user),
+    _user: dict[str, Any] = Depends(get_current_user),
 ):
     ew = db.get(EarlyWarning, warning_id)
     if not ew:
         raise HTTPException(status_code=404, detail="Early warning not found.")
     ew.status = "closed"
-    db.flush()
+    db.commit()
+    db.refresh(ew)
     extra = enriched(db, ew)
     return EarlyWarningResponse.model_validate(
         {**{c.name: getattr(ew, c.name) for c in ew.__table__.columns}, **extra}
     )
+

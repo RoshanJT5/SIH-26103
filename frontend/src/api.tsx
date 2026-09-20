@@ -169,3 +169,80 @@ export async function updateProfileApi(name: string, username?: string, email?: 
 
 export function Band({ band }: { band: string | null }) { return <span className={`band band-${band ?? "unknown"}`}><i aria-hidden="true" />{band ?? "Unavailable"}</span>; }
 
+export interface CreateProjectPayload {
+  project_code: string;
+  project_name: string;
+  sector: string;
+  ministry: string;
+  implementing_agency: string;
+  original_cost_cr: number;
+  revised_cost_cr?: number | null;
+  expenditure_cr: number;
+  physical_progress_pct: number;
+  original_commissioning_date: string;
+  revised_commissioning_date?: string | null;
+  sanction_date?: string | null;
+}
+
+export interface CreateProjectResult {
+  project_id: number;
+  project_code: string;
+  project_name: string;
+  snapshot_id: number;
+  sector: string;
+  ministry: string;
+  implementing_agency: string;
+  overall_score: number | null;
+  risk_band: RiskBand | null;
+  cost_risk_probability: number | null;
+  time_risk_probability: number | null;
+  implementation_score: number | null;
+  redirect_url: string;
+  message: string;
+}
+
+export async function createProjectApi(payload: CreateProjectPayload): Promise<CreateProjectResult> {
+  return postJson<CreateProjectResult>("/projects", payload);
+}
+
+export async function initializeDemoApi(): Promise<{ status: string; dataset_id: number; is_new: boolean; message: string; accepted_count: number }> {
+  return postJson<{ status: string; dataset_id: number; is_new: boolean; message: string; accepted_count: number }>("/projects/initialize-demo", {});
+}
+
+export async function uploadDatasetApi(file: File, sourceDate?: string): Promise<any> {
+  const token = getToken();
+  const formData = new FormData();
+  formData.append("file", file);
+  if (sourceDate) {
+    formData.append("source_as_of_date", sourceDate);
+  }
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  const response = await fetch(`${API_URL}/projects/upload`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+  if (!response.ok) {
+    let detail = `Upload failed (${response.status})`;
+    try {
+      const err = await response.json();
+      if (err?.detail) detail = err.detail;
+    } catch {
+      // ignore
+    }
+    throw new Error(detail);
+  }
+  return response.json();
+}
+
+export async function acknowledgeWarningApi(id: number): Promise<EarlyWarning> {
+  return postJson<EarlyWarning>(`/early-warnings/${id}/acknowledge`, {});
+}
+
+export async function closeWarningApi(id: number): Promise<EarlyWarning> {
+  return postJson<EarlyWarning>(`/early-warnings/${id}/close`, {});
+}
+
