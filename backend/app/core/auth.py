@@ -6,35 +6,65 @@ from typing import Any
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import func
+from sqlalchemy.orm import Session
 
 from .config import get_settings
+from ..db.session import SessionLocal
+from ..models.user import User
 
 _bearer = HTTPBearer(auto_error=False)
 _tokens: dict[str, datetime] = {}
 _user_sessions: dict[str, dict[str, Any]] = {}
 _tokens_lock = Lock()
 
-# In-memory user registry for official officers and admins
-_registered_users: dict[str, dict[str, str]] = {
-    "officer@gov.in": {
+# Default built-in system demo accounts
+_DEFAULT_ACCOUNTS = [
+    {
         "name": "Nodal Project Officer",
         "email": "officer@gov.in",
         "username": "nodal_officer",
-        "password_hash": hashlib.sha256("officer123".encode()).hexdigest(),
+        "password": "officer123",
         "role": "officer",
     },
-    "monitoring@sameeksha.gov.in": {
+    {
         "name": "Monitoring Director",
         "email": "monitoring@sameeksha.gov.in",
         "username": "monitoring_dir",
-        "password_hash": hashlib.sha256("monitor123".encode()).hexdigest(),
+        "password": "monitor123",
         "role": "director",
     },
-}
+]
 
 
 def _hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
+
+
+def _ensure_default_accounts_in_db(db: Session) -> None:
+    """Ensure baseline demonstration accounts exist in the SQL database."""
+    try:
+        for acc in _DEFAULT_ACCOUNTS:
+            existing = (
+                db.query(User)
+                .filter(
+                    (func.lower(User.email) == acc["email"].lower())
+                    | (func.lower(User.username) == acc["username"].lower())
+                )
+                .first()
+            )
+            if not existing:
+                u = User(
+                    name=acc["name"],
+                    email=acc["email"].lower(),
+                    username=acc["username"].lower(),
+                    password_hash=_hash_password(acc["password"]),
+                    role=acc["role"],
+                )
+                db.add(u)
+        db.commit()
+    except Exception:
+        db.rollback()
 
 
 def issue_admin_token(username: str, password: str) -> tuple[str, int]:
@@ -59,33 +89,77 @@ def issue_admin_token(username: str, password: str) -> tuple[str, int]:
     return token, settings.admin_token_ttl_seconds
 
 
-def register_user(name: str, email: str, password: str, username: str | None = None) -> tuple[str, int, dict[str, str]]:
+def register_user(
+    name: str,
+    email: str,
+    password: str,
+    username: str | None = None,
+    db: Session | None = None,
+) -> tuple[str, int, dict[str, str]]:
+    """Persists a new user directly into the SQL database."""
     clean_email = email.strip().lower()
     clean_name = name.strip()
     clean_username = (username or clean_name.replace(" ", "_").lower()).strip()
     pwd_hash = _hash_password(password)
 
-    user_record = {
-        "name": clean_name,
-        "email": clean_email,
-        "username": clean_username,
-        "password_hash": pwd_hash,
-        "role": "officer",
-    }
+    session_created = False
+    if db is None:
+        db = SessionLocal()
+        session_created = True
 
+    try:
+        # Check if user already exists in database
+        existing = (
+            db.query(User)
+            .filter(
+                (func.lower(User.email) == clean_email)
+                | (func.lower(User.username) == clean_username)
+            )
+            .first()
+        )
+        if existing:
+            if existing.password_hash == pwd_hash:
+                user_public = {
+                    "name": existing.name,
+                    "email": existing.email,
+                    "username": existing.username,
+                    "role": existing.role,
+                }
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="An account with this email or username already exists.",
+                )
+        else:
+            # Insert new User row into SQL database
+            new_user = User(
+                name=clean_name,
+                email=clean_email,
+                username=clean_username,
+                password_hash=pwd_hash,
+                role="officer",
+            )
+            db.add(new_user)
+            db.commit()
+            db.refresh(new_user)
+
+            user_public = {
+                "name": new_user.name,
+                "email": new_user.email,
+                "username": new_user.username,
+                "role": new_user.role,
+            }
+
+    finally:
+        if session_created:
+            db.close()
+
+    # Issue session token
     token = secrets.token_urlsafe(32)
     ttl = get_settings().admin_token_ttl_seconds or 86400
     expires_at = datetime.now(timezone.utc) + timedelta(seconds=ttl)
 
-    user_public = {
-        "name": clean_name,
-        "email": clean_email,
-        "username": clean_username,
-        "role": "officer",
-    }
-
     with _tokens_lock:
-        _registered_users[clean_email] = user_record
         _tokens[token] = expires_at
         _user_sessions[token] = {"user": user_public, "expires_at": expires_at}
         _cleanup_expired_tokens()
@@ -93,7 +167,12 @@ def register_user(name: str, email: str, password: str, username: str | None = N
     return token, ttl, user_public
 
 
-def authenticate_user(username_or_email: str, password: str) -> tuple[str, int, dict[str, str]]:
+def authenticate_user(
+    username_or_email: str,
+    password: str,
+    db: Session | None = None,
+) -> tuple[str, int, dict[str, str]]:
+    """Queries user credentials from the database and returns an access token."""
     settings = get_settings()
     identifier = username_or_email.strip()
 
@@ -111,42 +190,172 @@ def authenticate_user(username_or_email: str, password: str) -> tuple[str, int, 
                 return token, ttl, admin_profile
             raise HTTPException(status_code=401, detail="Invalid admin credentials.")
 
-    # 2. Check registered users
-    clean_id = identifier.lower()
-    pwd_hash = _hash_password(password)
-    target_user: dict[str, str] | None = None
+    # 2. Query SQL Database
+    session_created = False
+    if db is None:
+        db = SessionLocal()
+        session_created = True
+
+    try:
+        _ensure_default_accounts_in_db(db)
+        clean_id = identifier.lower()
+        pwd_hash = _hash_password(password)
+
+        db_user = (
+            db.query(User)
+            .filter(
+                (func.lower(User.email) == clean_id)
+                | (func.lower(User.username) == clean_id)
+            )
+            .first()
+        )
+
+        if db_user is not None:
+            if db_user.password_hash != pwd_hash:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid password.")
+
+            # Record login timestamp in database
+            db_user.last_login_at = datetime.now(timezone.utc)
+            db.commit()
+
+            user_public = {
+                "name": db_user.name,
+                "email": db_user.email,
+                "username": db_user.username,
+                "role": db_user.role,
+            }
+        else:
+            # Fallback auto-registration for official prototype test accounts
+            if "@" in identifier and len(password) >= 4:
+                fallback_name = identifier.split("@")[0].replace(".", " ").replace("_", " ").title()
+                return register_user(
+                    name=fallback_name,
+                    email=identifier,
+                    password=password,
+                    db=db,
+                )
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials.")
+    finally:
+        if session_created:
+            db.close()
+
+    # Issue session token
+    token = secrets.token_urlsafe(32)
+    ttl = settings.admin_token_ttl_seconds or 86400
+    expires_at = datetime.now(timezone.utc) + timedelta(seconds=ttl)
 
     with _tokens_lock:
-        for u_email, u_data in _registered_users.items():
-            if u_email.lower() == clean_id or u_data.get("username", "").lower() == clean_id:
-                if u_data.get("password_hash") == pwd_hash:
-                    target_user = u_data
-                    break
-                else:
-                    raise HTTPException(status_code=401, detail="Invalid password.")
+        _tokens[token] = expires_at
+        _user_sessions[token] = {"user": user_public, "expires_at": expires_at}
+        _cleanup_expired_tokens()
 
-    if target_user is not None:
-        token = secrets.token_urlsafe(32)
-        ttl = settings.admin_token_ttl_seconds or 86400
-        expires_at = datetime.now(timezone.utc) + timedelta(seconds=ttl)
-        user_public = {
-            "name": target_user["name"],
-            "email": target_user["email"],
-            "username": target_user["username"],
-            "role": target_user.get("role", "officer"),
-        }
+    return token, ttl, user_public
+
+
+def update_user_profile(
+    current_user: dict[str, Any],
+    name: str,
+    username: str | None = None,
+    email: str | None = None,
+    token: str | None = None,
+    db: Session | None = None,
+) -> dict[str, str]:
+    """Updates user profile details in SQL database and updates active session caches."""
+    clean_name = name.strip()
+    clean_new_username = username.strip() if username else None
+    clean_new_email = email.strip().lower() if email else None
+
+    session_created = False
+    if db is None:
+        db = SessionLocal()
+        session_created = True
+
+    try:
+        curr_email = current_user.get("email", "").strip().lower()
+        curr_username = current_user.get("username", "").strip().lower()
+
+        db_user = (
+            db.query(User)
+            .filter(
+                (func.lower(User.email) == curr_email)
+                | (func.lower(User.username) == curr_username)
+            )
+            .first()
+        )
+
+        if db_user is not None:
+            # Check for username conflicts
+            if clean_new_username and clean_new_username.lower() != db_user.username.lower():
+                conflict = (
+                    db.query(User)
+                    .filter(
+                        func.lower(User.username) == clean_new_username.lower(),
+                        User.id != db_user.id,
+                    )
+                    .first()
+                )
+                if conflict:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Username is already taken by another account.",
+                    )
+                db_user.username = clean_new_username
+
+            # Check for email conflicts
+            if clean_new_email and clean_new_email != db_user.email.lower():
+                conflict = (
+                    db.query(User)
+                    .filter(
+                        func.lower(User.email) == clean_new_email,
+                        User.id != db_user.id,
+                    )
+                    .first()
+                )
+                if conflict:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Email is already taken by another account.",
+                    )
+                db_user.email = clean_new_email
+
+            if clean_name:
+                db_user.name = clean_name
+
+            db.commit()
+            db.refresh(db_user)
+
+            updated_user = {
+                "name": db_user.name,
+                "email": db_user.email,
+                "username": db_user.username,
+                "role": db_user.role,
+            }
+        else:
+            # Fallback update for memory-only/admin profiles
+            updated_user = {
+                "name": clean_name or current_user.get("name", "Officer"),
+                "email": clean_new_email or current_user.get("email", ""),
+                "username": clean_new_username or current_user.get("username", "officer"),
+                "role": current_user.get("role", "officer"),
+            }
+
+        # Update in-memory session cache for this token and any matching active sessions
         with _tokens_lock:
-            _tokens[token] = expires_at
-            _user_sessions[token] = {"user": user_public, "expires_at": expires_at}
-            _cleanup_expired_tokens()
-        return token, ttl, user_public
+            if token and token in _user_sessions:
+                _user_sessions[token]["user"] = updated_user
+            for sess in _user_sessions.values():
+                u = sess.get("user")
+                if u and (
+                    (curr_email and u.get("email") == curr_email)
+                    or (curr_username and u.get("username") == curr_username)
+                ):
+                    sess["user"] = updated_user
 
-    # 3. For official prototype demo: if email format and valid password, create on first login
-    if "@" in identifier and len(password) >= 4:
-        fallback_name = identifier.split("@")[0].replace(".", " ").replace("_", " ").title()
-        return register_user(name=fallback_name, email=identifier, password=password)
+        return updated_user
+    finally:
+        if session_created:
+            db.close()
 
-    raise HTTPException(status_code=401, detail="Invalid credentials.")
 
 
 def _cleanup_expired_tokens() -> None:
@@ -216,4 +425,4 @@ def get_admin_user(
         if expires_at is None or expires_at <= datetime.now(timezone.utc):
             _tokens.pop(credentials.credentials, None)
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired admin token.")
-    return get_settings().admin_username
+    return get_settings().admin_username

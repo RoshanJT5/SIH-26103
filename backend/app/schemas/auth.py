@@ -20,6 +20,13 @@ class UserProfileResponse(BaseModel):
     role: str = "officer"
 
 
+class UpdateProfileRequest(BaseModel):
+    name: str = Field(min_length=2, max_length=128)
+    username: str | None = Field(default=None, max_length=128)
+    email: str | None = Field(default=None, max_length=128)
+
+
+
 class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"

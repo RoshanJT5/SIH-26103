@@ -1,12 +1,15 @@
 from typing import Any
 from urllib.parse import quote
 from fastapi import APIRouter, Depends, Query
+from fastapi.security import HTTPAuthorizationCredentials
 
 from ..core.auth import (
+    _bearer,
     authenticate_user,
     get_current_user,
     get_optional_current_user,
     register_user,
+    update_user_profile,
 )
 from ..schemas.auth import (
     LoginRequest,
@@ -14,6 +17,7 @@ from ..schemas.auth import (
     RouteVerificationRequest,
     RouteVerificationResponse,
     SignupRequest,
+    UpdateProfileRequest,
     UserProfileResponse,
 )
 
@@ -65,13 +69,17 @@ def is_path_protected(path: str) -> bool:
     return True
 
 
+from sqlalchemy.orm import Session
+from ..db.session import get_db
+
 @router.post("/signup", response_model=LoginResponse)
-def signup(request: SignupRequest) -> LoginResponse:
+def signup(request: SignupRequest, db: Session = Depends(get_db)) -> LoginResponse:
     token, expires_in, user_dict = register_user(
         name=request.name,
         email=request.email,
         password=request.password,
         username=request.username,
+        db=db,
     )
     return LoginResponse(
         access_token=token,
@@ -82,10 +90,11 @@ def signup(request: SignupRequest) -> LoginResponse:
 
 
 @router.post("/login", response_model=LoginResponse)
-def login(request: LoginRequest) -> LoginResponse:
+def login(request: LoginRequest, db: Session = Depends(get_db)) -> LoginResponse:
     token, expires_in, user_dict = authenticate_user(
         username_or_email=request.username,
         password=request.password,
+        db=db,
     )
     return LoginResponse(
         access_token=token,
@@ -93,6 +102,7 @@ def login(request: LoginRequest) -> LoginResponse:
         expires_in=expires_in,
         user=UserProfileResponse(**user_dict),
     )
+
 
 
 @router.get("/me", response_model=UserProfileResponse)
@@ -105,6 +115,27 @@ def get_authenticated_profile(
         username=current_user.get("username", "officer"),
         role=current_user.get("role", "officer"),
     )
+
+
+@router.put("/me", response_model=UserProfileResponse)
+@router.patch("/me", response_model=UserProfileResponse)
+def update_profile(
+    request: UpdateProfileRequest,
+    current_user: dict[str, Any] = Depends(get_current_user),
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    db: Session = Depends(get_db),
+) -> UserProfileResponse:
+    """Updates the user's name, display username, and email in the database and updates active session."""
+    token = credentials.credentials if credentials else None
+    updated = update_user_profile(
+        current_user=current_user,
+        name=request.name,
+        username=request.username,
+        email=request.email,
+        token=token,
+        db=db,
+    )
+    return UserProfileResponse(**updated)
 
 
 @router.get("/check-protected")

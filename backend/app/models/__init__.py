@@ -1,5 +1,6 @@
 from .early_warnings import EarlyWarning
 from .updates import PlatformUpdate
+from .user import User
 from .entities import (
     Alert,
     AuditEvent,
@@ -24,4 +25,5 @@ __all__ = [
     "ProjectSnapshot",
     "RiskExplanation",
     "RiskPrediction",
+    "User",
 ]

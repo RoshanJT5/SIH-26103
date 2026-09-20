@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useCurrentUser } from "../utils/auth";
+import { updateProfileApi } from "../api";
+
 
 function adjustFont(direction: "down" | "reset" | "up") {
   const root = document.documentElement;
@@ -60,6 +62,8 @@ export default function GovLayout() {
   const [editUsername, setEditUsername] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Close profile dropdown on outside click
   useEffect(() => {
@@ -76,19 +80,33 @@ export default function GovLayout() {
     };
   }, [profileOpen]);
 
-  function handleSaveProfile(e: FormEvent) {
+  async function handleSaveProfile(e: FormEvent) {
     e.preventDefault();
     if (!editName.trim()) return;
-    updateUser({
-      name: editName.trim(),
-      username: editUsername.trim() || editName.trim(),
-      email: editEmail.trim(),
-    });
-    setSaveSuccess(true);
-    setTimeout(() => {
-      setSaveSuccess(false);
-      setIsEditModalOpen(false);
-    }, 600);
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      const updated = await updateProfileApi(
+        editName.trim(),
+        editUsername.trim() || editName.trim(),
+        editEmail.trim() || undefined,
+      );
+      updateUser({
+        name: updated.name,
+        username: updated.username,
+        email: updated.email,
+        role: updated.role,
+      });
+      setSaveSuccess(true);
+      setTimeout(() => {
+        setSaveSuccess(false);
+        setIsEditModalOpen(false);
+      }, 700);
+    } catch (err: any) {
+      setSaveError(err?.message || "Failed to update profile. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   const closeTimer = useRef<number | null>(null);
@@ -197,6 +215,8 @@ export default function GovLayout() {
                         setEditName(user.name);
                         setEditUsername(user.username || user.name);
                         setEditEmail(user.email);
+                        setSaveSuccess(false);
+                        setSaveError(null);
                         setProfileOpen(false);
                         setIsEditModalOpen(true);
                       }}
@@ -345,6 +365,11 @@ export default function GovLayout() {
                     ✓ Profile updated successfully!
                   </div>
                 )}
+                {saveError && (
+                  <div className="alert" style={{ padding: "8px 12px", margin: 0, fontSize: "0.85rem", color: "#991B1B", background: "#FEE2E2", border: "1px solid #F87171", borderRadius: "4px" }}>
+                    {saveError}
+                  </div>
+                )}
                 <div className="field">
                   <span><label htmlFor="edit-name">Full Name *</label></span>
                   <input
@@ -353,6 +378,7 @@ export default function GovLayout() {
                     onChange={(e) => setEditName(e.target.value)}
                     placeholder="Enter your name"
                     required
+                    disabled={isSaving}
                   />
                 </div>
                 <div className="field">
@@ -362,6 +388,7 @@ export default function GovLayout() {
                     value={editUsername}
                     onChange={(e) => setEditUsername(e.target.value)}
                     placeholder="Enter username"
+                    disabled={isSaving}
                   />
                 </div>
                 <div className="field">
@@ -372,6 +399,7 @@ export default function GovLayout() {
                     value={editEmail}
                     onChange={(e) => setEditEmail(e.target.value)}
                     placeholder="name@department.gov.in"
+                    disabled={isSaving}
                   />
                 </div>
               </div>
@@ -380,11 +408,12 @@ export default function GovLayout() {
                   type="button"
                   className="btn btn-secondary btn-sm"
                   onClick={() => setIsEditModalOpen(false)}
+                  disabled={isSaving}
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary btn-sm">
-                  Save Changes
+                <button type="submit" className="btn btn-primary btn-sm" disabled={isSaving}>
+                  {isSaving ? "Saving..." : "Save Changes"}
                 </button>
               </div>
             </form>

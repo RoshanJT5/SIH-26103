@@ -134,5 +134,38 @@ export async function signupApi(name: string, email: string, password: string, u
   });
 }
 
+export async function putJson<T>(path: string, body: unknown): Promise<T> {
+  const token = getToken();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  const response = await fetch(`${API_URL}${path}`, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    let detail = `Request failed (${response.status})`;
+    try {
+      const err = await response.json();
+      if (err?.detail) detail = err.detail;
+    } catch {
+      // ignore
+    }
+    throw new Error(detail);
+  }
+  return response.json() as Promise<T>;
+}
+
+export async function updateProfileApi(name: string, username?: string, email?: string): Promise<AuthUser> {
+  return putJson<AuthUser>("/auth/me", {
+    name,
+    username,
+    email,
+  });
+}
+
+
 export function Band({ band }: { band: string | null }) { return <span className={`band band-${band ?? "unknown"}`}><i aria-hidden="true" />{band ?? "Unavailable"}</span>; }
 
