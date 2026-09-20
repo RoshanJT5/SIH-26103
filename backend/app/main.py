@@ -21,10 +21,12 @@ from .db.session import engine
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    # Fail early when the configured database cannot be reached. Schema changes
-    # remain Alembic's responsibility rather than being created implicitly.
+    # Ensure database connection and initialize tables if not present
     with engine.connect():
         pass
+    from .db.base import Base
+    from . import models  # noqa: F401
+    Base.metadata.create_all(bind=engine)
     yield
 
 

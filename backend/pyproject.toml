@@ -1,7 +1,7 @@
 [project]
-name = "sih-26103"
+name = "sih-26103-backend"
 version = "0.1.0"
-description = "Infrastructure Project Monitoring and Early Warning System"
+description = "Infrastructure Project Monitoring Backend"
 requires-python = ">=3.12, <3.13"
 dependencies = [
     "alembic>=1.14.0",
@@ -29,5 +29,4 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["backend*", "ml*"]
-exclude = ["DOC*", "DATA*", "database*", "frontend*", "tests*"]
+include = ["app*"]

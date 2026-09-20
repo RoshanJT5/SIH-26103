@@ -19,4 +19,8 @@ database/*.sqlite
 database/*.sqlite3
 database/*-wal
 database/*-shm
+backend/database/*.db*
+*.egg-info/
+dist/
+build/
 artifacts/models/
