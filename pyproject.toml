@@ -5,7 +5,7 @@ description = "Infrastructure Project Monitoring and Early Warning System"
 requires-python = ">=3.12, <3.13"
 dependencies = [
     "alembic>=1.14.0",
-    "fastapi>=0.115.0",
+    "fastapi[standard]>=0.115.0",
     "httpx>=0.28.0",
     "langchain-core>=0.3.0",
     "langchain-groq>=0.2.0",
