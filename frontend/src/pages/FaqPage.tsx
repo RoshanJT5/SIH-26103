@@ -1,5 +1,14 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  Search,
+  ArrowRight,
+  HelpCircle,
+  LogIn,
+  UserPlus,
+  FileText,
+  LifeBuoy,
+} from "lucide-react";
 
 export default function FaqPage() {
   const [filter, setFilter] = useState("");
@@ -56,8 +65,8 @@ export default function FaqPage() {
       <div className="wrap">
         <div className="section-head">
           <p className="section-eyebrow">Public Information</p>
-          <h1 id="faq-title" style={{ fontSize: "2rem", marginBottom: "8px" }}>
-            Frequently Asked Questions (FAQ)
+          <h1 id="faq-title" style={{ fontSize: "2rem", marginBottom: "8px", display: "flex", alignItems: "center", gap: 8 }}>
+            <HelpCircle size={28} color="var(--navy-700)" /> Frequently Asked Questions (FAQ)
           </h1>
           <p className="sub" style={{ maxWidth: 720 }}>
             Learn about access policies, public versus protected areas, data methodologies,
@@ -67,7 +76,11 @@ export default function FaqPage() {
 
         <div style={{ margin: "20px 0 28px", maxWidth: 480 }}>
           <div className="field">
-            <span><label htmlFor="faq-search">Search questions</label></span>
+            <span>
+              <label htmlFor="faq-search" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <Search size={13} /> Search questions
+              </label>
+            </span>
             <input
               id="faq-search"
               type="search"
@@ -127,22 +140,39 @@ export default function FaqPage() {
 
         <div className="card-grid" style={{ marginTop: 36 }}>
           <article className="card">
-            <h3>Need Access?</h3>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <LogIn size={20} color="var(--navy-700)" />
+              <h3 style={{ margin: 0 }}>Need Access?</h3>
+            </div>
             <p>Authorized officials can register or log in to access the active monitoring dashboard and predictive insights.</p>
             <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-              <Link className="btn btn-primary btn-sm" to="/login">Official Login</Link>
-              <Link className="btn btn-secondary btn-sm" to="/signup">Register</Link>
+              <Link className="btn btn-primary btn-sm" to="/login" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <LogIn size={13} /> Official Login
+              </Link>
+              <Link className="btn btn-secondary btn-sm" to="/signup" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <UserPlus size={13} /> Register
+              </Link>
             </div>
           </article>
           <article className="card">
-            <h3>Public Documents</h3>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <FileText size={20} color="var(--navy-700)" />
+              <h3 style={{ margin: 0 }}>Public Documents</h3>
+            </div>
             <p>Download open oversight reports, guidelines, data dictionary formats, and standard operating procedures.</p>
-            <Link className="link" to="/documents" style={{ display: "inline-block", marginTop: 12 }}>Browse Documents →</Link>
+            <Link className="link" to="/documents" style={{ display: "inline-flex", alignItems: "center", gap: 3, marginTop: 12 }}>
+              Browse Documents <ArrowRight size={13} />
+            </Link>
           </article>
           <article className="card">
-            <h3>Help &amp; Grievance</h3>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <LifeBuoy size={20} color="var(--navy-700)" />
+              <h3 style={{ margin: 0 }}>Help &amp; Grievance</h3>
+            </div>
             <p>Check system health, accessibility guidelines, keyboard shortcuts, or submit feedback.</p>
-            <Link className="link" to="/help" style={{ display: "inline-block", marginTop: 12 }}>Go to Help Center →</Link>
+            <Link className="link" to="/help" style={{ display: "inline-flex", alignItems: "center", gap: 3, marginTop: 12 }}>
+              Go to Help Center <ArrowRight size={13} />
+            </Link>
           </article>
         </div>
       </div>

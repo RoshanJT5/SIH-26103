@@ -1,5 +1,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import {
+  PlusCircle,
+  UploadCloud,
+  Database,
+  Search,
+  ArrowRight,
+} from "lucide-react";
 import { Band, formatNumber, formatPercent, getJson, initializeDemoApi, type Project } from "../api";
 import CreateProjectModal from "../components/CreateProjectModal";
 import UploadDatasetModal from "../components/UploadDatasetModal";
@@ -65,17 +72,17 @@ export default function ProjectsPage() {
               type="button"
               className="btn btn-secondary"
               onClick={() => setIsUploadOpen(true)}
-              style={{ fontSize: "0.85rem", padding: "8px 14px" }}
+              style={{ fontSize: "0.85rem", padding: "8px 14px", display: "inline-flex", alignItems: "center", gap: 6 }}
             >
-              📁 Ingest Dataset
+              <UploadCloud size={16} /> Ingest Dataset
             </button>
             <button
               type="button"
               className="btn btn-primary"
               onClick={() => setIsCreateOpen(true)}
-              style={{ fontSize: "0.85rem", padding: "8px 14px" }}
+              style={{ fontSize: "0.85rem", padding: "8px 14px", display: "inline-flex", alignItems: "center", gap: 6 }}
             >
-              ➕ Register New Project
+              <PlusCircle size={16} /> Register New Project
             </button>
           </div>
         </div>
@@ -91,14 +98,22 @@ export default function ProjectsPage() {
               className="btn btn-primary"
               onClick={handleInitDemo}
               disabled={initializingDemo}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
             >
-              {initializingDemo ? "Initializing MoSPI Baseline…" : "Load Baseline MoSPI Dataset"}
+              <Database size={16} /> {initializingDemo ? "Initializing MoSPI Baseline…" : "Load Baseline MoSPI Dataset"}
             </button>
           </div>
         )}
 
         <div className="filters" role="search" aria-label="Filter projects">
-          <div className="field search-field"><span><label htmlFor="q">Search</label></span><input id="q" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Name, code or sector" /></div>
+          <div className="field search-field">
+            <span>
+              <label htmlFor="q" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <Search size={14} /> Search
+              </label>
+            </span>
+            <input id="q" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Name, code or sector" />
+          </div>
           <div className="field"><span><label htmlFor="sector">Sector</label></span>
             <select id="sector" value={sector} onChange={(e) => { const next = new URLSearchParams(params); if (e.target.value) next.set("sector", e.target.value); else next.delete("sector"); setParams(next); }}>
               <option value="">All sectors</option>{sectors.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -122,7 +137,11 @@ export default function ProjectsPage() {
                 <td>{formatPercent(p.physical_progress_pct)}</td>
                 <td><strong>{p.overall_score === null ? "—" : formatNumber(p.overall_score)}</strong></td>
                 <td><Band band={p.risk_band} /></td>
-                <td><Link className="link" to={`/projects/${p.project_id}`}>View →</Link></td>
+                <td>
+                  <Link className="link" to={`/projects/${p.project_id}`} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                    View <ArrowRight size={14} />
+                  </Link>
+                </td>
               </tr>
             ))}</tbody>
           </table></div></div>

@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  Route,
+  Train,
+  Building2,
+  Droplets,
+  Zap,
+  ArrowRight,
+  Search,
+  Bot,
+} from "lucide-react";
 import HeroArt from "../components/HeroArt";
 import IndiaMap from "../components/IndiaMap";
 import { Reveal, useCountUp, useReducedMotion } from "../hooks";
@@ -14,11 +24,11 @@ const DONUT = [
 ];
 
 const SECTOR_CARDS = [
-  { title: "Roads & Highways", match: ["road", "highway"], ico: "R", box: "si-blue", card: "" },
-  { title: "Railways", match: ["rail"], ico: "Rl", box: "si-saffron", card: "a-saffron" },
-  { title: "Urban Infrastructure", match: ["urban", "housing", "city"], ico: "U", box: "si-teal", card: "a-teal" },
-  { title: "Water & Irrigation", match: ["water", "irrigation", "river"], ico: "W", box: "si-gold", card: "a-gold" },
-  { title: "Energy & Power", match: ["power", "energy", "electric"], ico: "E", box: "si-navy", card: "a-navy" },
+  { title: "Roads & Highways", match: ["road", "highway"], icon: Route, box: "si-blue", card: "" },
+  { title: "Railways", match: ["rail"], icon: Train, box: "si-saffron", card: "a-saffron" },
+  { title: "Urban Infrastructure", match: ["urban", "housing", "city"], icon: Building2, box: "si-teal", card: "a-teal" },
+  { title: "Water & Irrigation", match: ["water", "irrigation", "river"], icon: Droplets, box: "si-gold", card: "a-gold" },
+  { title: "Energy & Power", match: ["power", "energy", "electric"], icon: Zap, box: "si-navy", card: "a-navy" },
 ];
 
 const JOURNEY = [
@@ -131,7 +141,7 @@ export default function Home() {
 
       <div className="wrap">
         <div className="notice attention" role="note" style={{ marginTop: 20 }}>
-          <div><strong>Important notice — some records may be unavailable</strong><p>Required evidence has not been provided for every project. Unavailable values are shown as unavailable, never treated as safe. <Link className="link" to="/documents">View methodology →</Link></p></div>
+          <div><strong>Important notice — some records may be unavailable</strong><p>Required evidence has not been provided for every project. Unavailable values are shown as unavailable, never treated as safe. <Link className="link" to="/documents" style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>View methodology <ArrowRight size={12} /></Link></p></div>
         </div>
         {error && <div className="alert alert-error" role="alert" style={{ marginTop: 12 }}>{error} · API: {API_URL}</div>}
       </div>
@@ -171,9 +181,12 @@ export default function Home() {
           <div className="sector-grid">
             {SECTOR_CARDS.map((s) => {
               const count = groups.filter((g) => s.match.some((m) => g.group.toLowerCase().includes(m))).reduce((a, g) => a + g.project_count, 0);
+              const IconComp = s.icon;
               return (
                 <Reveal key={s.title} className={`sector-card ${s.card}`}>
-                  <span className={`sector-ico ${s.box}`} aria-hidden="true">{s.ico}</span>
+                  <span className={`sector-ico ${s.box}`} aria-hidden="true" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                    <IconComp size={18} />
+                  </span>
                   <h3>{s.title}</h3>
                   <span className="count">{formatNumber(count)}</span>
                   <p>projects tracked</p>
@@ -188,7 +201,14 @@ export default function Home() {
         <div className="wrap">
           <Reveal><div className="section-head"><p className="section-eyebrow">Monitoring</p><h2 id="mon">Project Monitoring Dashboard</h2><p>Review progress, implementation signals and stored risk indicators. Full records on the <Link className="link" to="/projects">Projects</Link> page.</p></div></Reveal>
           <div className="filters" role="search" aria-label="Filter preview">
-            <div className="field search-field"><span><label htmlFor="hq">Search</label></span><input id="hq" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Name, code or sector" /></div>
+            <div className="field search-field">
+              <span>
+                <label htmlFor="hq" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                  <Search size={13} /> Search
+                </label>
+              </span>
+              <input id="hq" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Name, code or sector" />
+            </div>
             <div className="field"><span><label htmlFor="hsector">Sector</label></span><select id="hsector" value={sector} onChange={(e) => setSector(e.target.value)}><option value="">All sectors</option>{sectors.map((s) => <option key={s} value={s}>{s}</option>)}</select></div>
             <div className="field"><span><label htmlFor="hband">Risk</label></span><select id="hband" value={band} onChange={(e) => setBand(e.target.value)}><option value="">All bands</option><option value="low">Low</option><option value="medium">Moderate</option><option value="high">High</option><option value="critical">Critical</option></select></div>
           </div>
@@ -201,7 +221,7 @@ export default function Home() {
                 <td>{p.physical_progress_pct === null ? "—" : `${formatNumber(Number(p.physical_progress_pct), 1)}%`}</td>
                 <td>{bandLabel(p.risk_band)}</td>
                 <td>{p.dataset?.source_as_of_date ?? "—"}</td>
-                <td><Link className="link" to={`/projects/${p.project_id}`}>View Details</Link></td>
+                <td><Link className="link" to={`/projects/${p.project_id}`} style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>View Details <ArrowRight size={12} /></Link></td>
               </tr>
             ))}</tbody>
           </table></div></div>
@@ -267,7 +287,9 @@ export default function Home() {
                   <div className="focus-meta"><span>{p.sector}</span><span>Progress {p.physical_progress_pct === null ? "—" : `${formatNumber(Number(p.physical_progress_pct), 0)}%`}</span></div>
                   <div className="focus-meta"><span>Risk</span>{bandLabel(p.risk_band)}</div>
                   <p style={{ fontSize: "0.85rem", color: "#52606D", margin: 0 }}>{p.ministry} · Score {p.overall_score === null ? "unavailable" : formatNumber(Number(p.overall_score))} / 100</p>
-                  <Link className="link" to={`/projects/${p.project_id}`}>View Project →</Link>
+                  <Link className="link" to={`/projects/${p.project_id}`} style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+                    View Project <ArrowRight size={12} />
+                  </Link>
                 </div>
               </Reveal>
             ))}
@@ -304,16 +326,34 @@ export default function Home() {
         <div className="wrap">
           <Reveal><div className="section-head"><p className="section-eyebrow">Accountability</p><h2 id="transp">Transparency &amp; Methodology</h2><p>Plain-language answers about what this platform does — and does not — claim.</p></div></Reveal>
           <div className="card-grid">
-            <article className="card"><h3>How risk is computed</h3><p>Snapshot classification from reported costs, dates and progress. Logistic regression and XGBoost, calibrated per target.</p><Link className="link" to="/analytics">See analytics →</Link></article>
-            <article className="card"><h3>Data quality</h3><p>Accepted rows may carry warnings. Rejected rows are excluded from scoring and listed with reasons.</p><Link className="link" to="/documents">Check quality →</Link></article>
-            <article className="card"><h3>Model limitations</h3><p>Analytical prototype only. Sparse peer cohorts and missing revised figures limit comparability.</p><Link className="link" to="/help">Read FAQs →</Link></article>
+            <article className="card">
+              <h3>How risk is computed</h3>
+              <p>Snapshot classification from reported costs, dates and progress. Logistic regression and XGBoost, calibrated per target.</p>
+              <Link className="link" to="/analytics" style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+                See analytics <ArrowRight size={12} />
+              </Link>
+            </article>
+            <article className="card">
+              <h3>Data quality</h3>
+              <p>Accepted rows may carry warnings. Rejected rows are excluded from scoring and listed with reasons.</p>
+              <Link className="link" to="/documents" style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+                Check quality <ArrowRight size={12} />
+              </Link>
+            </article>
+            <article className="card">
+              <h3>Model limitations</h3>
+              <p>Analytical prototype only. Sparse peer cohorts and missing revised figures limit comparability.</p>
+              <Link className="link" to="/help" style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+                Read FAQs <ArrowRight size={12} />
+              </Link>
+            </article>
           </div>
         </div>
       </section>
 
       <section className="section section-cream" aria-labelledby="upd">
         <div className="wrap">
-          <Reveal><div className="section-head"><p className="section-eyebrow">Announcements</p><h2 id="upd">Latest updates</h2><p>Dataset, method and system notices. <Link className="link" to="/updates">View All Updates →</Link></p></div></Reveal>
+          <Reveal><div className="section-head"><p className="section-eyebrow">Announcements</p><h2 id="upd">Latest updates</h2><p>Dataset, method and system notices. <Link className="link" to="/updates" style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>View All Updates <ArrowRight size={12} /></Link></p></div></Reveal>
           <Reveal><ul className="upd">
             {updates.length === 0 ? (
               <>
@@ -323,11 +363,11 @@ export default function Home() {
               </>
             ) : (
               updates.map((u) => (
-                <li key={u.id}><time dateTime={u.published_at}>{new Date(u.published_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} · {u.category}</time><h4>{u.title}</h4><p>{u.summary}</p><Link className="link" to={`/updates/${u.id}`}>View Details</Link></li>
+                <li key={u.id}><time dateTime={u.published_at}>{new Date(u.published_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} · {u.category}</time><h4>{u.title}</h4><p>{u.summary}</p><Link className="link" to={`/updates/${u.id}`} style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>View Details <ArrowRight size={12} /></Link></li>
               ))
             )}
           </ul></Reveal>
-          {updates.length > 0 && <p style={{ marginTop: 12 }}><Link className="link" to="/updates">View All Updates →</Link></p>}
+          {updates.length > 0 && <p style={{ marginTop: 12 }}><Link className="link" to="/updates" style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>View All Updates <ArrowRight size={12} /></Link></p>}
         </div>
       </section>
 
@@ -338,7 +378,11 @@ export default function Home() {
             <h3 id="ask">Ask questions about the stored portfolio</h3>
             <p>“Which projects have the highest stored risk?” · “Show projects with missing evidence.” · “Which sector has the highest average risk?”</p>
             <p style={{ fontSize: "0.8rem" }}>Responses are generated only from available project records.</p>
-            <p style={{ marginTop: 12 }}><Link className="btn btn-primary" style={{ background: "#F39A24", borderColor: "#F39A24", color: "#1A1206" }} to="/dashboard">Ask the Assistant →</Link></p>
+            <p style={{ marginTop: 12 }}>
+              <Link className="btn btn-primary" style={{ background: "#F39A24", borderColor: "#F39A24", color: "#1A1206", display: "inline-flex", alignItems: "center", gap: 6 }} to="/dashboard">
+                <Bot size={16} /> Ask the Assistant <ArrowRight size={14} />
+              </Link>
+            </p>
           </div></Reveal>
         </div>
       </section>
@@ -362,7 +406,7 @@ function DocRow({ kind, title, meta, to }: { kind: string; title: string; meta: 
   return (
     <div className="doc-row">
       {inner}
-      {to ? <Link className="link act" to={to}>View →</Link> : <span className="act" style={{ fontSize: "0.8rem", color: "#52606D" }}>Prototype entry</span>}
+      {to ? <Link className="link act" to={to} style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>View <ArrowRight size={12} /></Link> : <span className="act" style={{ fontSize: "0.8rem", color: "#52606D" }}>Prototype entry</span>}
     </div>
   );
 }

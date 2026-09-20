@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
+import { ArrowLeft, ArrowRight, FileText } from "lucide-react";
 import { Band, formatCrore, formatNumber, formatPercent, getJson, postJson, type Benchmark, type Detail, type Explanation } from "../api";
 
 export default function ProjectDetailPage() {
@@ -41,7 +42,11 @@ export default function ProjectDetailPage() {
 
   return (
     <section className="section" aria-labelledby="t"><div className="wrap">
-      <p><Link className="link" to="/projects">← Back to Projects</Link></p>
+      <p>
+        <Link className="link" to="/projects" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+          <ArrowLeft size={14} /> Back to Projects
+        </Link>
+      </p>
       <div className="section-head"><p className="section-eyebrow">Project detail — 13-section investigation</p><h2 id="t">Investigation · {detail?.project_code ?? `#${id}`}</h2><p>Sections: facts, risk, confidence, trajectory, forecast, recommendations, drivers, benchmark, timeline, priority, warnings, limitations, report.</p></div>
       {error && <div className="alert alert-error" role="alert">{error}</div>}
       {loading ? <div className="panel loading" role="status"><span className="spinner" />Loading project…</div> : detail && (
@@ -72,11 +77,24 @@ export default function ProjectDetailPage() {
 
           <div className="card-grid" style={{marginTop:16}}>
             <article className="card"><h3>8 · Recommendations (1-5 actions)</h3>{recs ? recs.items.map((r:any)=><p key={r.priority} style={{fontSize:"0.85rem"}}><strong>{r.priority}. {r.action}</strong><br/><span style={{color:"#6B7280"}}>{r.evidence} — {r.rationale}</span></p>) : <p>—</p>}</article>
-            <article className="card"><h3>9 · Timeline</h3>{timeline ? timeline.points.slice(0,5).map((p:any)=><p key={p.snapshot_id} style={{fontSize:"0.8rem"}}>DS {p.dataset_id} — score {formatNumber(p.overall_score,1)} · {p.risk_band??"—"} · {formatPercent(p.physical_progress_pct)}</p>) : <p>—</p>}<Link className="link" to="/analytics">View analytics →</Link></article>
+            <article className="card">
+              <h3>9 · Timeline</h3>
+              {timeline ? timeline.points.slice(0,5).map((p:any)=><p key={p.snapshot_id} style={{fontSize:"0.8rem"}}>DS {p.dataset_id} — score {formatNumber(p.overall_score,1)} · {p.risk_band??"—"} · {formatPercent(p.physical_progress_pct)}</p>) : <p>—</p>}
+              <Link className="link" to="/analytics" style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+                View analytics <ArrowRight size={13} />
+              </Link>
+            </article>
             <article className="card"><h3>11 · Early Warnings</h3>{early?.items?.length? early.items.map((w:any)=><p key={w.id} style={{fontSize:"0.8rem"}}><Band band={w.severity==="watch"?"medium":w.severity}/> {w.type}: {w.title}</p>) : <p>No open warnings for this project.</p>}</article>
           </div>
 
-          <div className="card" style={{marginTop:16}}><h3>13 · Project Brief Report</h3><p style={{fontSize:"0.85rem"}}>Structured report with all required sections.</p><button className="btn btn-secondary" onClick={genReport}>Generate Report</button>{report && <div style={{marginTop:12, padding:12, background:"#F7F9FC", borderRadius:6}}>{report.error ? <p>{report.error}</p> : report.sections?.map((s:any)=><div key={s.title} style={{marginBottom:8}}><strong>{s.title}</strong><p style={{fontSize:"0.85rem", margin:"2px 0"}}>{s.body.slice(0,220)}</p></div>)}</div>}</div>
+          <div className="card" style={{marginTop:16}}>
+            <h3>13 · Project Brief Report</h3>
+            <p style={{fontSize:"0.85rem"}}>Structured report with all required sections.</p>
+            <button className="btn btn-secondary" onClick={genReport} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <FileText size={15} /> Generate Report
+            </button>
+            {report && <div style={{marginTop:12, padding:12, background:"#F7F9FC", borderRadius:6}}>{report.error ? <p>{report.error}</p> : report.sections?.map((s:any)=><div key={s.title} style={{marginBottom:8}}><strong>{s.title}</strong><p style={{fontSize:"0.85rem", margin:"2px 0"}}>{s.body.slice(0,220)}</p></div>)}</div>}
+          </div>
         </>
       )}
     </div></section>

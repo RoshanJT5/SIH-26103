@@ -1,5 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  Bell,
+  AlertCircle,
+  CheckCircle2,
+  Check,
+  CheckCheck,
+  Search,
+  ArrowRight,
+} from "lucide-react";
 import { getJson, Band, acknowledgeWarningApi, closeWarningApi, type EarlyWarning } from "../api";
 
 export default function EarlyWarningsPage() {
@@ -89,18 +98,18 @@ export default function EarlyWarningsPage() {
           </p>
 
           {/* Quick counts bar */}
-          <div style={{ display: "flex", gap: 12, marginTop: 12, flexWrap: "wrap" }}>
-            <span style={{ fontSize: "0.82rem", background: "var(--bg-alt)", padding: "4px 10px", borderRadius: 4, border: "1px solid var(--border)" }}>
-              Total Signals: <strong>{items.length}</strong>
+          <div style={{ display: "flex", gap: 12, marginTop: 12, flexWrap: "wrap", alignItems: "center" }}>
+            <span style={{ fontSize: "0.82rem", background: "var(--bg-alt)", padding: "4px 10px", borderRadius: 4, border: "1px solid var(--border)", display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <Bell size={13} color="var(--ink-2)" /> Total Signals: <strong>{items.length}</strong>
             </span>
-            <span style={{ fontSize: "0.82rem", background: "#FEF3F2", color: "var(--error)", padding: "4px 10px", borderRadius: 4, border: "1px solid #FECDCA" }}>
-              Open / Unresolved: <strong>{openCount}</strong>
+            <span style={{ fontSize: "0.82rem", background: "#FEF3F2", color: "var(--error)", padding: "4px 10px", borderRadius: 4, border: "1px solid #FECDCA", display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <AlertCircle size={13} color="var(--error)" /> Open / Unresolved: <strong>{openCount}</strong>
             </span>
-            <span style={{ fontSize: "0.82rem", background: "#EFF4FB", color: "var(--navy-700)", padding: "4px 10px", borderRadius: 4, border: "1px solid #B9C9E4" }}>
-              Acknowledged: <strong>{ackCount}</strong>
+            <span style={{ fontSize: "0.82rem", background: "#EFF4FB", color: "var(--navy-700)", padding: "4px 10px", borderRadius: 4, border: "1px solid #B9C9E4", display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <Check size={13} color="var(--navy-700)" /> Acknowledged: <strong>{ackCount}</strong>
             </span>
-            <span style={{ fontSize: "0.82rem", background: "#F0FDF4", color: "var(--success)", padding: "4px 10px", borderRadius: 4, border: "1px solid #BBF7D0" }}>
-              Closed / Resolved: <strong>{closedCount}</strong>
+            <span style={{ fontSize: "0.82rem", background: "#F0FDF4", color: "var(--success)", padding: "4px 10px", borderRadius: 4, border: "1px solid #BBF7D0", display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <CheckCircle2 size={13} color="var(--success)" /> Closed / Resolved: <strong>{closedCount}</strong>
             </span>
           </div>
         </div>
@@ -109,7 +118,11 @@ export default function EarlyWarningsPage() {
 
         <div className="filters" role="search">
           <div className="field search-field">
-            <span><label htmlFor="q-ew">Search Signals</label></span>
+            <span>
+              <label htmlFor="q-ew" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <Search size={13} /> Search Signals
+              </label>
+            </span>
             <input
               id="q-ew"
               value={search}
@@ -230,8 +243,9 @@ export default function EarlyWarningsPage() {
                               disabled={actionLoading === w.id}
                               onClick={() => handleAcknowledge(w.id)}
                               title="Acknowledge signal"
+                              style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
                             >
-                              Ack
+                              {actionLoading === w.id ? "…" : <><Check size={12} /> Ack</>}
                             </button>
                           )}
                           {w.status !== "closed" && (
@@ -241,12 +255,13 @@ export default function EarlyWarningsPage() {
                               disabled={actionLoading === w.id}
                               onClick={() => handleClose(w.id)}
                               title="Close signal as resolved"
+                              style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
                             >
-                              Close
+                              <CheckCheck size={12} /> Close
                             </button>
                           )}
-                          <Link to={`/projects/${w.project_id}`} className="link" style={{ fontSize: "0.82rem" }}>
-                            View →
+                          <Link to={`/projects/${w.project_id}`} className="link" style={{ fontSize: "0.82rem", display: "inline-flex", alignItems: "center", gap: 3 }}>
+                            View <ArrowRight size={13} />
                           </Link>
                         </div>
                       </td>

@@ -1,10 +1,27 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import {
+  UploadCloud,
+  PlusCircle,
+  Database,
+  Layers,
+  AlertTriangle,
+  Coins,
+  Calendar,
+  BellRing,
+  ListOrdered,
+  TrendingDown,
+  PieChart,
+  Cpu,
+  Sliders,
+  Bot,
+  Send,
+  ArrowRight,
+} from "lucide-react";
 import { formatCrore, formatNumber, getJson, initializeDemoApi, API_URL, type AssistantResponse, type Dashboard } from "../api";
 import CreateProjectModal from "../components/CreateProjectModal";
 import UploadDatasetModal from "../components/UploadDatasetModal";
-
 
 export default function DashboardPage() {
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
@@ -67,17 +84,17 @@ export default function DashboardPage() {
             type="button"
             className="btn btn-secondary"
             onClick={() => setIsUploadOpen(true)}
-            style={{ fontSize: "0.85rem", padding: "8px 14px" }}
+            style={{ fontSize: "0.85rem", padding: "8px 14px", display: "inline-flex", alignItems: "center", gap: 6 }}
           >
-            📁 Ingest Dataset
+            <UploadCloud size={16} /> Ingest Dataset
           </button>
           <button
             type="button"
             className="btn btn-primary"
             onClick={() => setIsCreateOpen(true)}
-            style={{ fontSize: "0.85rem", padding: "8px 14px" }}
+            style={{ fontSize: "0.85rem", padding: "8px 14px", display: "inline-flex", alignItems: "center", gap: 6 }}
           >
-            ➕ Register New Project
+            <PlusCircle size={16} /> Register New Project
           </button>
         </div>
       </div>
@@ -94,36 +111,195 @@ export default function DashboardPage() {
             className="btn btn-primary"
             onClick={handleInitDemo}
             disabled={initializingDemo}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
           >
-            {initializingDemo ? "Initializing MoSPI Baseline…" : "Load Baseline MoSPI Dataset"}
+            <Database size={16} /> {initializingDemo ? "Initializing MoSPI Baseline…" : "Load Baseline MoSPI Dataset"}
           </button>
         </div>
       )}
       {loading ? <div className="panel loading" role="status"><span className="spinner" />Loading summary…</div> : dashboard && (
         <>
           <div className="card-grid" style={{marginBottom:16}}>
-            <article className="card"><h3>1 · Projects tracked</h3><p style={{fontSize:"1.8rem",fontWeight:700,color:"#123B73"}}>{formatNumber(dashboard.total_projects)}</p><p>{formatNumber(dashboard.available_predictions)} with stored scores</p><Link className="link" to="/projects">View projects →</Link></article>
-            <article className="card"><h3>2 · High / Critical</h3><p style={{fontSize:"1.8rem",fontWeight:700,color:"#123B73"}}>{dashboard.high_risk_projects} / {dashboard.critical_projects}</p><p>Average {formatNumber(dashboard.average_overall_score,1)} /100</p><Link className="link" to="/analytics">See analytics →</Link></article>
-            <article className="card"><h3>3 · Capital reported</h3><p style={{fontSize:"1.4rem",fontWeight:700,color:"#123B73"}}>{formatCrore(dashboard.total_revised_cost_cr || dashboard.total_original_cost_cr)}</p><p>Expenditure {formatCrore(dashboard.total_expenditure_cr)}</p></article>
+            <article className="card">
+              <h3 style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <Layers size={17} color="var(--navy-700)" /> 1 · Projects tracked
+              </h3>
+              <p style={{fontSize:"1.8rem",fontWeight:700,color:"#123B73"}}>{formatNumber(dashboard.total_projects)}</p>
+              <p>{formatNumber(dashboard.available_predictions)} with stored scores</p>
+              <Link className="link" to="/projects" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                View projects <ArrowRight size={14} />
+              </Link>
+            </article>
+
+            <article className="card">
+              <h3 style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <AlertTriangle size={17} color="var(--error)" /> 2 · High / Critical
+              </h3>
+              <p style={{fontSize:"1.8rem",fontWeight:700,color:"#123B73"}}>{dashboard.high_risk_projects} / {dashboard.critical_projects}</p>
+              <p>Average {formatNumber(dashboard.average_overall_score,1)} /100</p>
+              <Link className="link" to="/analytics" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                See analytics <ArrowRight size={14} />
+              </Link>
+            </article>
+
+            <article className="card">
+              <h3 style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <Coins size={17} color="var(--navy-700)" /> 3 · Capital reported
+              </h3>
+              <p style={{fontSize:"1.4rem",fontWeight:700,color:"#123B73"}}>{formatCrore(dashboard.total_revised_cost_cr || dashboard.total_original_cost_cr)}</p>
+              <p>Expenditure {formatCrore(dashboard.total_expenditure_cr)}</p>
+            </article>
           </div>
-          <div className="panel" style={{marginBottom:16}}><div className="panel-head"><div><p className="section-eyebrow">4 · Dataset</p><h3>Current snapshot</h3></div></div><div style={{padding:16}}><div className="fact-grid"><div><span>Source file</span><strong>{dashboard.dataset?.source_name ?? "None"}</strong></div><div><span>Source date</span><strong>{dashboard.dataset?.source_as_of_date ?? "Unavailable"}</strong></div><div><span>Imported at</span><strong>{dashboard.dataset?.imported_at ?? "—"}</strong></div><div><span>Dataset ID</span><strong>{dashboard.dataset ? String(dashboard.dataset.dataset_id) : "—"}</strong></div></div></div></div>
+
+          <div className="panel" style={{marginBottom:16}}>
+            <div className="panel-head">
+              <div>
+                <p className="section-eyebrow">4 · Dataset</p>
+                <h3 style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <Calendar size={17} color="var(--navy-700)" /> Current snapshot
+                </h3>
+              </div>
+            </div>
+            <div style={{padding:16}}>
+              <div className="fact-grid">
+                <div><span>Source file</span><strong>{dashboard.dataset?.source_name ?? "None"}</strong></div>
+                <div><span>Source date</span><strong>{dashboard.dataset?.source_as_of_date ?? "Unavailable"}</strong></div>
+                <div><span>Imported at</span><strong>{dashboard.dataset?.imported_at ?? "—"}</strong></div>
+                <div><span>Dataset ID</span><strong>{dashboard.dataset ? String(dashboard.dataset.dataset_id) : "—"}</strong></div>
+              </div>
+            </div>
+          </div>
 
           <div className="card-grid" style={{marginBottom:16}}>
-            <article className="card"><h3>5 · Early warnings</h3><p>{warnings ? `${warnings.items?.length ?? 0} open signals` : "Loading…"}</p><ul style={{fontSize:"0.8rem", margin:"6px 0"}}>{warnings?.items?.slice(0,3).map((w:any)=><li key={w.id}>{w.type} — {w.severity}</li>)}</ul><Link className="link" to="/early-warnings">Open warning center →</Link></article>
-            <article className="card"><h3>6 · Priority queue</h3><p>{priority ? `Top priority ${priority.items?.[0]?.project_code ?? "—"}` : "Loading…"}</p><p style={{fontSize:"0.8rem"}}>{priority?.formula?.slice(0,60) ?? ""}</p><Link className="link" to="/interventions">View queue →</Link></article>
-            <article className="card"><h3>7 · Deteriorating trends</h3><p>{trends ? `${trends.items?.filter((t:any)=>t.trend!=="stable").length ?? 0} worsening` : "Loading…"}</p><p style={{fontSize:"0.8rem"}}>Thresholds: watch/deteriorating/rapid</p><Link className="link" to="/monitoring/changes">Check changes →</Link></article>
+            <article className="card">
+              <h3 style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <BellRing size={17} color="var(--saffron)" /> 5 · Early warnings
+              </h3>
+              <p>{warnings ? `${warnings.items?.length ?? 0} open signals` : "Loading…"}</p>
+              <ul style={{fontSize:"0.8rem", margin:"6px 0"}}>{warnings?.items?.slice(0,3).map((w:any)=><li key={w.id}>{w.type} — {w.severity}</li>)}</ul>
+              <Link className="link" to="/early-warnings" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                Open warning center <ArrowRight size={14} />
+              </Link>
+            </article>
+
+            <article className="card">
+              <h3 style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <ListOrdered size={17} color="var(--navy-700)" /> 6 · Priority queue
+              </h3>
+              <p>{priority ? `Top priority ${priority.items?.[0]?.project_code ?? "—"}` : "Loading…"}</p>
+              <p style={{fontSize:"0.8rem"}}>{priority?.formula?.slice(0,60) ?? ""}</p>
+              <Link className="link" to="/interventions" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                View queue <ArrowRight size={14} />
+              </Link>
+            </article>
+
+            <article className="card">
+              <h3 style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <TrendingDown size={17} color="var(--warning)" /> 7 · Deteriorating trends
+              </h3>
+              <p>{trends ? `${trends.items?.filter((t:any)=>t.trend!=="stable").length ?? 0} worsening` : "Loading…"}</p>
+              <p style={{fontSize:"0.8rem"}}>Thresholds: watch/deteriorating/rapid</p>
+              <Link className="link" to="/monitoring/changes" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                Check changes <ArrowRight size={14} />
+              </Link>
+            </article>
           </div>
 
           <div className="card-grid" style={{marginBottom:16}}>
-            <article className="card"><h3>8 · Sector pulse</h3><Link className="link" to="/analytics">Sector analytics →</Link><p style={{fontSize:"0.8rem"}}>Per-sector average risk and counts</p></article>
-            <article className="card"><h3>9 · Cost drivers</h3>{drivers ? <ul style={{fontSize:"0.8rem"}}>{drivers.items?.slice(0,3).map((d:any)=><li key={d.feature}>{d.feature}: {formatNumber(d.average_shap,3)}</li>)}</ul> : <p>Loading…</p>}<Link className="link" to="/analytics">Explore drivers →</Link></article>
-            <article className="card"><h3>10 · Simulation</h3><p style={{fontSize:"0.85rem"}}>What-if progress or cost adjustments — read-only, never persists.</p><Link className="link" to="/simulation">Try simulation →</Link></article>
+            <article className="card">
+              <h3 style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <PieChart size={17} color="var(--navy-700)" /> 8 · Sector pulse
+              </h3>
+              <Link className="link" to="/analytics" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                Sector analytics <ArrowRight size={14} />
+              </Link>
+              <p style={{fontSize:"0.8rem"}}>Per-sector average risk and counts</p>
+            </article>
+
+            <article className="card">
+              <h3 style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <Cpu size={17} color="var(--navy-700)" /> 9 · Cost drivers
+              </h3>
+              {drivers ? <ul style={{fontSize:"0.8rem"}}>{drivers.items?.slice(0,3).map((d:any)=><li key={d.feature}>{d.feature}: {formatNumber(d.average_shap,3)}</li>)}</ul> : <p>Loading…</p>}
+              <Link className="link" to="/analytics" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                Explore drivers <ArrowRight size={14} />
+              </Link>
+            </article>
+
+            <article className="card">
+              <h3 style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <Sliders size={17} color="var(--navy-700)" /> 10 · Simulation
+              </h3>
+              <p style={{fontSize:"0.85rem"}}>What-if progress or cost adjustments — read-only, never persists.</p>
+              <Link className="link" to="/simulation" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                Try simulation <ArrowRight size={14} />
+              </Link>
+            </article>
           </div>
 
-          <div className="panel" style={{marginBottom:16}}><div className="panel-head"><div><p className="section-eyebrow">Priority snapshot (chart)</p><h3>Top priority scores</h3></div></div><div style={{padding:"6px 14px 14px"}}>{priority && <ResponsiveContainer width="100%" height={180}><BarChart data={priority.items.slice(0,6).map((i:any)=>({name:i.project_code, score:i.priority_score}))}><CartesianGrid stroke="#D9E1EA"/><XAxis dataKey="name" tick={{fontSize:10}}/><YAxis domain={[0,100]} tick={{fontSize:11}}/><Tooltip/><Bar dataKey="score" fill="#164A7A"/></BarChart></ResponsiveContainer>}</div></div>
+          <div className="panel" style={{marginBottom:16}}>
+            <div className="panel-head">
+              <div>
+                <p className="section-eyebrow">Priority snapshot (chart)</p>
+                <h3>Top priority scores</h3>
+              </div>
+            </div>
+            <div style={{padding:"6px 14px 14px"}}>
+              {priority && (
+                <ResponsiveContainer width="100%" height={180}>
+                  <BarChart data={priority.items.slice(0,6).map((i:any)=>({name:i.project_code, score:i.priority_score}))}>
+                    <CartesianGrid stroke="#D9E1EA"/>
+                    <XAxis dataKey="name" tick={{fontSize:10}}/>
+                    <YAxis domain={[0,100]} tick={{fontSize:11}}/>
+                    <Tooltip/>
+                    <Bar dataKey="score" fill="#164A7A"/>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
         </>
       )}
-      <section className="panel" id="assistant" style={{ marginTop: 16 }} aria-labelledby="a"><div className="panel-head"><div><p className="section-eyebrow">Grounded assistant</p><h3 id="a">Ask the portfolio — POST /assistant/query</h3></div></div><div style={{ padding: 16 }}><p style={{fontSize:"0.8rem", color:"#52606D"}}>New intents: find_deteriorating_projects, list_early_warnings, show_priority, show_cost_drivers.</p><form className="assistant-form" onSubmit={ask} role="search"><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Try: find deteriorating projects" aria-label="Ask the portfolio assistant" /><button className="btn btn-primary" disabled={asking}>{asking ? "Thinking…" : "Ask"}</button></form>{answer && <div className="assistant-answer" role="status"><p>{answer.answer}</p><div className="assistant-meta"><span>{answer.provider_status}</span><span>{answer.sources.length} sources</span><span>{answer.intent}</span></div>{answer.caveats.map((c) => <small key={c} style={{ display: "block" }}>{c}</small>)}</div>}</div></section>
+
+      <section className="panel" id="assistant" style={{ marginTop: 16 }} aria-labelledby="a">
+        <div className="panel-head">
+          <div>
+            <p className="section-eyebrow">Grounded assistant</p>
+            <h3 id="a" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Bot size={20} color="var(--saffron)" />
+              Ask the portfolio — POST /assistant/query
+            </h3>
+          </div>
+        </div>
+        <div style={{ padding: 16 }}>
+          <p style={{fontSize:"0.8rem", color:"#52606D"}}>
+            New intents: find_deteriorating_projects, list_early_warnings, show_priority, show_cost_drivers.
+          </p>
+          <form className="assistant-form" onSubmit={ask} role="search">
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Try: find deteriorating projects" aria-label="Ask the portfolio assistant" />
+            <button className="btn btn-primary" disabled={asking} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              {asking ? (
+                "Thinking…"
+              ) : (
+                <>
+                  <Send size={15} /> Ask
+                </>
+              )}
+            </button>
+          </form>
+          {answer && (
+            <div className="assistant-answer" role="status">
+              <p>{answer.answer}</p>
+              <div className="assistant-meta">
+                <span>{answer.provider_status}</span>
+                <span>{answer.sources.length} sources</span>
+                <span>{answer.intent}</span>
+              </div>
+              {answer.caveats.map((c) => <small key={c} style={{ display: "block" }}>{c}</small>)}
+            </div>
+          )}
+        </div>
+      </section>
 
       <CreateProjectModal
         isOpen={isCreateOpen}

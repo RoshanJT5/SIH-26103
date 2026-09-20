@@ -1,4 +1,12 @@
 import React, { useState } from "react";
+import {
+  X,
+  CheckCircle2,
+  UploadCloud,
+  Info,
+  RefreshCw,
+  Clock,
+} from "lucide-react";
 import { uploadDatasetApi } from "../api";
 
 interface Props {
@@ -41,11 +49,14 @@ export default function UploadDatasetModal({ isOpen, onClose, onUploaded }: Prop
       <div className="gov-modal">
         <div className="gov-modal-header">
           <div>
-            <h3 id="upload-modal-title">Ingest MoSPI Project Dataset</h3>
+            <h3 id="upload-modal-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <UploadCloud size={22} color="var(--navy-700)" />
+              Ingest MoSPI Project Dataset
+            </h3>
             <p>Upload official CSV flash report to update the monitoring baseline and re-run models</p>
           </div>
           <button type="button" className="gov-modal-close" onClick={onClose} aria-label="Close dialog">
-            ✕
+            <X size={20} />
           </button>
         </div>
 
@@ -54,18 +65,17 @@ export default function UploadDatasetModal({ isOpen, onClose, onUploaded }: Prop
             <div style={{ textAlign: "center", padding: "16px 8px" }}>
               <div
                 style={{
-                  width: 52,
-                  height: 52,
+                  width: 56,
+                  height: 56,
                   borderRadius: "50%",
                   background: "#E6F4EA",
                   color: "#137333",
                   display: "grid",
                   placeItems: "center",
-                  fontSize: 26,
                   margin: "0 auto 12px",
                 }}
               >
-                ✓
+                <CheckCircle2 size={36} />
               </div>
               <h4 style={{ margin: "0 0 6px", color: "var(--navy-900)", fontSize: "1.15rem" }}>
                 Dataset Ingested & Scored!
@@ -105,12 +115,13 @@ export default function UploadDatasetModal({ isOpen, onClose, onUploaded }: Prop
               <button
                 type="button"
                 className="btn btn-primary"
+                style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
                 onClick={() => {
                   onClose();
                   window.location.reload();
                 }}
               >
-                Refresh Dashboard & Portfolio
+                <RefreshCw size={16} /> Refresh Dashboard & Portfolio
               </button>
             </div>
           </div>
@@ -123,8 +134,11 @@ export default function UploadDatasetModal({ isOpen, onClose, onUploaded }: Prop
                 </div>
               )}
 
-              <div className="notice info" style={{ padding: "10px 14px", borderRadius: 6, fontSize: "0.82rem" }}>
-                <strong>MoSPI Format Requirement:</strong> Supports official MoSPI flash report format (.csv) containing project codes, sectors, sanction costs, cumulative expenditure, and commissioning dates.
+              <div className="notice info" style={{ padding: "10px 14px", borderRadius: 6, fontSize: "0.82rem", display: "flex", gap: 8, alignItems: "flex-start" }}>
+                <Info size={18} color="var(--info)" style={{ flexShrink: 0, marginTop: 2 }} />
+                <div>
+                  <strong>MoSPI Format Requirement:</strong> Supports official MoSPI flash report format (.csv) containing project codes, sectors, sanction costs, cumulative expenditure, and commissioning dates.
+                </div>
               </div>
 
               <div className="gov-form-group">
@@ -153,11 +167,19 @@ export default function UploadDatasetModal({ isOpen, onClose, onUploaded }: Prop
             </div>
 
             <div className="gov-modal-footer">
-              <button type="button" className="btn btn-secondary" onClick={onClose} disabled={loading}>
-                Cancel
+              <button type="button" className="btn btn-secondary" onClick={onClose} disabled={loading} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <X size={16} /> Cancel
               </button>
-              <button type="submit" className="btn btn-primary" disabled={loading || !file}>
-                {loading ? "Validating & Ingesting…" : "Upload & Analyze"}
+              <button type="submit" className="btn btn-primary" disabled={loading || !file} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                {loading ? (
+                  <>
+                    <Clock size={16} className="spinner" /> Validating & Ingesting…
+                  </>
+                ) : (
+                  <>
+                    <UploadCloud size={16} /> Upload & Analyze
+                  </>
+                )}
               </button>
             </div>
           </form>

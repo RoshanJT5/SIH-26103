@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { getUser, setUser } from "../utils/auth";
 import { signupApi } from "../api";
 
@@ -98,7 +99,7 @@ export default function SignupPage() {
       </div>
       <div className="auth-form-side">
         <div className="auth-top">
-          <Link className="link" to="/">← Back to Home</Link>
+          <Link className="link" to="/" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><ArrowLeft size={14} />Back to Home</Link>
           <span>SIH 26103 · Secure Gateway</span>
         </div>
         <div className="auth-box">
@@ -151,7 +152,7 @@ export default function SignupPage() {
               disabled={loading}
               style={{ width: "100%" }}
             >
-              {loading ? "Registering…" : `Sign up → Access ${redirectTarget === "/dashboard" ? "Dashboard" : "Page"}`}
+              {loading ? "Registering…" : <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>Sign up <ArrowRight size={14} /> Access {redirectTarget === "/dashboard" ? "Dashboard" : "Page"}</span>}
             </button>
           </form>
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { ArrowRight } from "lucide-react";
 import { getJson } from "../api";
 
 type UpdateItem = { id: number; category: string; title: string; summary: string; content: string; published_at: string; updated_at: string; status: string; related_dataset_id: number | null };
@@ -80,7 +81,7 @@ export default function UpdatesPage() {
             <p style={{ margin: "8px 0 4px", fontSize: "0.78rem", fontWeight: 700, color: "#52606D" }}>{fmtDate(featured.published_at)}</p>
             <h2 style={{ margin: "4px 0", color: "#0D3157" }}>{featured.title}</h2>
             <p style={{ color: "#52606D" }}>{featured.summary}</p>
-            <Link className="link" to={`/updates/${featured.id}`}>View Details →</Link>
+            <Link className="link" to={`/updates/${featured.id}`} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>View Details <ArrowRight size={13} /></Link>
           </article>
         )}
 

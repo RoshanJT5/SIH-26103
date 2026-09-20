@@ -1,6 +1,27 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ResponsiveContainer,
+  Scatter,
+  ScatterChart,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import {
+  Cpu,
+  ArrowRight,
+  X,
+  Lightbulb,
+  CheckCircle2,
+  ChevronUp,
+  ChevronDown,
+  ArrowLeftRight,
+} from "lucide-react";
 import { Band, bandColors, formatNumber, formatPercent, getJson, type Group, type Project } from "../api";
 
 export default function AnalyticsPage() {
@@ -68,8 +89,8 @@ export default function AnalyticsPage() {
               Multidimensional analytics powered by stored model inferences, Shapley feature attributions, and cross-sector benchmarking. Click any sector to drill down.
             </p>
           </div>
-          <Link to="/analytics/models" className="btn btn-secondary" style={{ fontSize: "0.85rem", padding: "8px 14px" }}>
-            📊 ML Models & Calibration →
+          <Link to="/analytics/models" className="btn btn-secondary" style={{ fontSize: "0.85rem", padding: "8px 14px", display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <Cpu size={15} /> ML Models & Calibration <ArrowRight size={14} />
           </Link>
         </div>
 
@@ -92,10 +113,10 @@ export default function AnalyticsPage() {
                   <button
                     type="button"
                     className="btn btn-secondary"
-                    style={{ padding: "4px 10px", fontSize: "0.8rem", minHeight: 32 }}
+                    style={{ padding: "4px 10px", fontSize: "0.8rem", minHeight: 32, display: "inline-flex", alignItems: "center", gap: 4 }}
                     onClick={() => setSelectedSector(null)}
                   >
-                    Clear Filter ({selectedSector}) ✕
+                    Clear Filter ({selectedSector}) <X size={13} />
                   </button>
                 )}
               </div>
@@ -136,8 +157,8 @@ export default function AnalyticsPage() {
                   </BarChart>
                 </ResponsiveContainer>
 
-                <p style={{ fontSize: "0.8rem", color: "var(--ink-3)", marginTop: 6 }}>
-                  💡 Tip: Click any bar or sector row below to filter projects by sector.
+                <p style={{ fontSize: "0.8rem", color: "var(--ink-3)", marginTop: 6, display: "flex", alignItems: "center", gap: 6 }}>
+                  <Lightbulb size={15} color="var(--saffron)" /> Tip: Click any bar or sector row below to filter projects by sector.
                 </p>
 
                 <div className="table-wrap" style={{ marginTop: 10 }}>
@@ -165,8 +186,8 @@ export default function AnalyticsPage() {
                           <td>
                             <strong>{s.group}</strong>
                             {selectedSector === s.group && (
-                              <span style={{ marginLeft: 8, fontSize: "0.72rem", color: "var(--saffron)", fontWeight: 700 }}>
-                                ● ACTIVE SELECTION
+                              <span style={{ marginLeft: 8, fontSize: "0.72rem", color: "var(--saffron)", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 3 }}>
+                                <CheckCircle2 size={12} /> ACTIVE SELECTION
                               </span>
                             )}
                           </td>
@@ -185,8 +206,8 @@ export default function AnalyticsPage() {
                             </span>
                           </td>
                           <td style={{ textAlign: "right" }}>
-                            <span className="link" style={{ fontSize: "0.82rem" }}>
-                              {selectedSector === s.group ? "Close ▲" : "Inspect ▼"}
+                            <span className="link" style={{ fontSize: "0.82rem", display: "inline-flex", alignItems: "center", gap: 3 }}>
+                              {selectedSector === s.group ? <>Close <ChevronUp size={13} /></> : <>Inspect <ChevronDown size={13} /></>}
                             </span>
                           </td>
                         </tr>
@@ -205,8 +226,8 @@ export default function AnalyticsPage() {
                     <p className="section-eyebrow">Interactive Sector Drilldown</p>
                     <h3 style={{ margin: 0 }}>Projects in {selectedSector} ({sectorProjects.length})</h3>
                   </div>
-                  <Link to={`/projects?sector=${encodeURIComponent(selectedSector)}`} className="link" style={{ fontSize: "0.85rem" }}>
-                    View all in Projects Directory →
+                  <Link to={`/projects?sector=${encodeURIComponent(selectedSector)}`} className="link" style={{ fontSize: "0.85rem", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                    View all in Projects Directory <ArrowRight size={14} />
                   </Link>
                 </div>
 
@@ -246,8 +267,8 @@ export default function AnalyticsPage() {
                               </td>
                               <td><Band band={p.risk_band} /></td>
                               <td style={{ textAlign: "right" }}>
-                                <Link to={`/projects/${p.project_id}`} className="link" style={{ fontSize: "0.82rem" }}>
-                                  View Audit →
+                                <Link to={`/projects/${p.project_id}`} className="link" style={{ fontSize: "0.82rem", display: "inline-flex", alignItems: "center", gap: 3 }}>
+                                  View Audit <ArrowRight size={13} />
                                 </Link>
                               </td>
                             </tr>
@@ -281,8 +302,23 @@ export default function AnalyticsPage() {
                       ))}
                     </select>
                   </div>
-                  <div style={{ alignSelf: "flex-end", paddingBottom: 10, fontWeight: 700, color: "var(--ink-3)" }}>
-                    VS
+                  <div style={{ alignSelf: "flex-end", paddingBottom: 10 }}>
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: 32,
+                        height: 32,
+                        borderRadius: "50%",
+                        background: "var(--navy-50)",
+                        color: "var(--navy-700)",
+                        border: "1px solid var(--navy-100)",
+                      }}
+                      title="Comparison vs"
+                    >
+                      <ArrowLeftRight size={16} />
+                    </span>
                   </div>
                   <div className="gov-form-group" style={{ minWidth: 200, flex: 1 }}>
                     <label htmlFor="bm-b">Sector B</label>

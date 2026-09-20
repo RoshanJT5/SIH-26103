@@ -1,5 +1,14 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  X,
+  CheckCircle2,
+  FolderPlus,
+  ArrowRight,
+  ArrowLeft,
+  PlusCircle,
+  Clock,
+} from "lucide-react";
 import { createProjectApi, type CreateProjectPayload, type CreateProjectResult } from "../api";
 
 interface Props {
@@ -82,11 +91,14 @@ export default function CreateProjectModal({ isOpen, onClose, onCreated }: Props
       <div className="gov-modal modal-wide">
         <div className="gov-modal-header">
           <div>
-            <h3 id="create-proj-title">Register New Infrastructure Project</h3>
+            <h3 id="create-proj-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <FolderPlus size={22} color="var(--navy-700)" />
+              Register New Infrastructure Project
+            </h3>
             <p>Add single project to live MoSPI monitoring portfolio with automatic ML risk scoring</p>
           </div>
           <button type="button" className="gov-modal-close" onClick={onClose} aria-label="Close dialog">
-            ✕
+            <X size={20} />
           </button>
         </div>
 
@@ -95,18 +107,17 @@ export default function CreateProjectModal({ isOpen, onClose, onCreated }: Props
             <div style={{ textAlign: "center", padding: "16px 8px" }}>
               <div
                 style={{
-                  width: 56,
-                  height: 56,
+                  width: 60,
+                  height: 60,
                   borderRadius: "50%",
                   background: "#E6F4EA",
                   color: "#137333",
                   display: "grid",
                   placeItems: "center",
-                  fontSize: 28,
                   margin: "0 auto 12px",
                 }}
               >
-                ✓
+                <CheckCircle2 size={36} />
               </div>
               <h4 style={{ margin: "0 0 6px", color: "var(--navy-900)", fontSize: "1.2rem" }}>
                 Project Registered & Scored Successfully!
@@ -140,11 +151,11 @@ export default function CreateProjectModal({ isOpen, onClose, onCreated }: Props
             </div>
 
             <div className="gov-modal-footer">
-              <button type="button" className="btn btn-secondary" onClick={onClose}>
-                Back to Projects
+              <button type="button" className="btn btn-secondary" onClick={onClose} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <ArrowLeft size={16} /> Back to Projects
               </button>
-              <button type="button" className="btn btn-primary" onClick={handleGoToProject}>
-                Open Project Overview & Risk Profile →
+              <button type="button" className="btn btn-primary" onClick={handleGoToProject} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                Open Project Overview & Risk Profile <ArrowRight size={16} />
               </button>
             </div>
           </div>
@@ -307,11 +318,19 @@ export default function CreateProjectModal({ isOpen, onClose, onCreated }: Props
             </div>
 
             <div className="gov-modal-footer">
-              <button type="button" className="btn btn-secondary" onClick={onClose} disabled={loading}>
-                Cancel
+              <button type="button" className="btn btn-secondary" onClick={onClose} disabled={loading} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <X size={16} /> Cancel
               </button>
-              <button type="submit" className="btn btn-primary" disabled={loading}>
-                {loading ? "Scoring & Registering…" : "Register & Score Project"}
+              <button type="submit" className="btn btn-primary" disabled={loading} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                {loading ? (
+                  <>
+                    <Clock size={16} className="spinner" /> Scoring & Registering…
+                  </>
+                ) : (
+                  <>
+                    <PlusCircle size={16} /> Register & Score Project
+                  </>
+                )}
               </button>
             </div>
           </form>

@@ -1,5 +1,20 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import {
+  User,
+  LogOut,
+  Edit3,
+  LogIn,
+  UserPlus,
+  Menu,
+  X,
+  ChevronDown,
+  Sun,
+  Check,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+} from "lucide-react";
 import { useCurrentUser } from "../utils/auth";
 import { updateProfileApi } from "../api";
 
@@ -142,7 +157,9 @@ export default function GovLayout() {
             <span className="utility-sep" aria-hidden="true">|</span>
             <button type="button">हिन्दी</button><button type="button" aria-current="true">English</button>
             <span className="utility-sep hide-sm" aria-hidden="true">|</span>
-            <button type="button" onClick={() => document.documentElement.classList.toggle("high-contrast")}>Accessibility</button>
+            <button type="button" onClick={() => document.documentElement.classList.toggle("high-contrast")} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+              <Sun size={13} /> Accessibility
+            </button>
             <a className="hide-sm" href="/faq">FAQ</a><a className="hide-sm" href="/help">Help</a><a className="hide-sm" href="#footer">Contact</a>
           </div>
         </div>
@@ -169,7 +186,7 @@ export default function GovLayout() {
                     onClick={() => setOpenDrop((v) => (v === item.label ? null : item.label))}
                     onKeyDown={(e) => { if (e.key === "Escape") setOpenDrop(null); }}
                   >
-                    {item.label} <span aria-hidden="true" className="nav-caret">▾</span>
+                    {item.label} <ChevronDown size={13} className="nav-caret" aria-hidden="true" />
                   </button>
                   <div className={`nav-menu${openDrop === item.label ? " open" : ""}`} role="menu" onMouseEnter={() => { if (closeTimer.current) window.clearTimeout(closeTimer.current); }} onMouseLeave={() => { closeTimer.current = window.setTimeout(() => setOpenDrop(null), 180); }}>
                     {item.items.map((sub) => (
@@ -183,7 +200,9 @@ export default function GovLayout() {
             )}
           </nav>
           <div className="header-actions">
-            <button className="btn btn-secondary btn-sm mobile-nav-toggle" type="button" onClick={() => setMobileNav((v) => !v)} aria-expanded={mobileNav} aria-label="Toggle navigation">Menu</button>
+            <button className="btn btn-secondary btn-sm mobile-nav-toggle" type="button" onClick={() => setMobileNav((v) => !v)} aria-expanded={mobileNav} aria-label="Toggle navigation" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              {mobileNav ? <X size={17} /> : <Menu size={17} />} Menu
+            </button>
             {user ? (
               <div className="profile-dropdown-wrap" ref={profileRef}>
                 <button
@@ -198,7 +217,7 @@ export default function GovLayout() {
                     {user.name ? user.name[0].toUpperCase() : (user.username ? user.username[0].toUpperCase() : "U")}
                   </span>
                   <span className="profile-name-text">{user.username || user.name}</span>
-                  <span className="profile-caret" aria-hidden="true">▾</span>
+                  <ChevronDown size={13} className="profile-caret" aria-hidden="true" />
                 </button>
                 {profileOpen && (
                   <div className="profile-menu" role="menu">
@@ -221,10 +240,7 @@ export default function GovLayout() {
                         setIsEditModalOpen(true);
                       }}
                     >
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                      </svg>
+                      <Edit3 size={15} aria-hidden="true" />
                       Edit Profile
                     </button>
                     <button
@@ -237,11 +253,7 @@ export default function GovLayout() {
                         navigate("/");
                       }}
                     >
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                        <polyline points="16 17 21 12 16 7" />
-                        <line x1="21" y1="12" x2="9" y2="12" />
-                      </svg>
+                      <LogOut size={15} aria-hidden="true" />
                       Sign Out
                     </button>
                   </div>
@@ -249,8 +261,12 @@ export default function GovLayout() {
               </div>
             ) : (
               <>
-                <NavLink className="btn btn-secondary btn-sm" to="/login">Login</NavLink>
-                <NavLink className="btn btn-primary btn-sm" to="/signup">Sign Up</NavLink>
+                <NavLink className="btn btn-secondary btn-sm" to="/login" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <LogIn size={14} /> Login
+                </NavLink>
+                <NavLink className="btn btn-primary btn-sm" to="/signup" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <UserPlus size={14} /> Sign Up
+                </NavLink>
               </>
             )}
           </div>
@@ -305,8 +321,9 @@ export default function GovLayout() {
                         setMobileNav(false);
                         setIsEditModalOpen(true);
                       }}
+                      style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}
                     >
-                      Edit Profile
+                      <Edit3 size={14} /> Edit Profile
                     </button>
                     <button
                       type="button"
@@ -316,15 +333,20 @@ export default function GovLayout() {
                         logout();
                         navigate("/");
                       }}
+                      style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}
                     >
-                      Sign Out
+                      <LogOut size={14} /> Sign Out
                     </button>
                   </div>
                 </div>
               ) : (
                 <>
-                  <NavLink to="/login" onClick={() => setMobileNav(false)}>Login</NavLink>
-                  <NavLink to="/signup" onClick={() => setMobileNav(false)}>Sign Up</NavLink>
+                  <NavLink to="/login" onClick={() => setMobileNav(false)} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                    <LogIn size={14} /> Login
+                  </NavLink>
+                  <NavLink to="/signup" onClick={() => setMobileNav(false)} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                    <UserPlus size={14} /> Sign Up
+                  </NavLink>
                 </>
               )}
             </div>
@@ -355,19 +377,19 @@ export default function GovLayout() {
                 onClick={() => setIsEditModalOpen(false)}
                 aria-label="Close modal"
               >
-                ✕
+                <X size={18} />
               </button>
             </div>
             <form onSubmit={handleSaveProfile}>
               <div className="profile-modal-body">
                 {saveSuccess && (
-                  <div className="alert alert-info" style={{ padding: "8px 12px", margin: 0, fontSize: "0.85rem" }}>
-                    ✓ Profile updated successfully!
+                  <div className="alert alert-info" style={{ padding: "8px 12px", margin: 0, fontSize: "0.85rem", display: "flex", alignItems: "center", gap: 6 }}>
+                    <CheckCircle2 size={16} /> Profile updated successfully!
                   </div>
                 )}
                 {saveError && (
-                  <div className="alert" style={{ padding: "8px 12px", margin: 0, fontSize: "0.85rem", color: "#991B1B", background: "#FEE2E2", border: "1px solid #F87171", borderRadius: "4px" }}>
-                    {saveError}
+                  <div className="alert" style={{ padding: "8px 12px", margin: 0, fontSize: "0.85rem", color: "#991B1B", background: "#FEE2E2", border: "1px solid #F87171", borderRadius: "4px", display: "flex", alignItems: "center", gap: 6 }}>
+                    <AlertCircle size={16} /> {saveError}
                   </div>
                 )}
                 <div className="field">
@@ -409,11 +431,20 @@ export default function GovLayout() {
                   className="btn btn-secondary btn-sm"
                   onClick={() => setIsEditModalOpen(false)}
                   disabled={isSaving}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
                 >
-                  Cancel
+                  <X size={14} /> Cancel
                 </button>
-                <button type="submit" className="btn btn-primary btn-sm" disabled={isSaving}>
-                  {isSaving ? "Saving..." : "Save Changes"}
+                <button type="submit" className="btn btn-primary btn-sm" disabled={isSaving} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  {isSaving ? (
+                    <>
+                      <Clock size={14} className="spinner" /> Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Check size={14} /> Save Changes
+                    </>
+                  )}
                 </button>
               </div>
             </form>
