@@ -214,7 +214,7 @@ export default function GovLayout() {
                       onClick={() => {
                         setProfileOpen(false);
                         logout();
-                        navigate("/login");
+                        navigate("/");
                       }}
                     >
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -294,7 +294,7 @@ export default function GovLayout() {
                       onClick={() => {
                         setMobileNav(false);
                         logout();
-                        navigate("/login");
+                        navigate("/");
                       }}
                     >
                       Sign Out

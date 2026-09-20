@@ -37,29 +37,17 @@ async def lifespan(_app: FastAPI):
 
 settings = get_settings()
 app = FastAPI(title=settings.app_name, lifespan=lifespan)
-parsed_origins = [
-    origin.strip().rstrip("/")
-    for origin in settings.allowed_origins.split(",")
-    if origin.strip()
-]
-is_wildcard = "*" in parsed_origins
 
-if is_wildcard:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origin_regex=".*",
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-else:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=parsed_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+# Allow all origins (localhost on any port, vercel production and preview deployments, custom domains)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"^https?://.*$",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
+
 
 app.include_router(health_router, prefix="/api")
 app.include_router(auth_router, prefix="/api")
