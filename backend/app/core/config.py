@@ -4,7 +4,14 @@ from pathlib import Path
 from pydantic import computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
+_here = Path(__file__).resolve()
+if len(_here.parents) >= 4 and (_here.parents[3] / "requirements.txt").exists():
+    PROJECT_ROOT = _here.parents[3]
+elif len(_here.parents) >= 3 and (_here.parents[2] / "requirements.txt").exists():
+    PROJECT_ROOT = _here.parents[2]
+else:
+    PROJECT_ROOT = _here.parents[3] if len(_here.parents) >= 4 else _here.parent
+
 
 
 class Settings(BaseSettings):
