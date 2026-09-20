@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useCurrentUser } from "../utils/auth";
 
 function adjustFont(direction: "down" | "reset" | "up") {
   const root = document.documentElement;
@@ -46,8 +47,49 @@ const TOP: (NavItem | Drop)[] = [
 function isDrop(x: NavItem | Drop): x is Drop { return "items" in x; }
 
 export default function GovLayout() {
+  const { user, updateUser, logout } = useCurrentUser();
+  const navigate = useNavigate();
   const [mobileNav, setMobileNav] = useState(false);
   const [openDrop, setOpenDrop] = useState<string | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement | null>(null);
+
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editUsername, setEditUsername] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Close profile dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setProfileOpen(false);
+      }
+    }
+    if (profileOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [profileOpen]);
+
+  function handleSaveProfile(e: FormEvent) {
+    e.preventDefault();
+    if (!editName.trim()) return;
+    updateUser({
+      name: editName.trim(),
+      username: editUsername.trim() || editName.trim(),
+      email: editEmail.trim(),
+    });
+    setSaveSuccess(true);
+    setTimeout(() => {
+      setSaveSuccess(false);
+      setIsEditModalOpen(false);
+    }, 600);
+  }
+
   const closeTimer = useRef<number | null>(null);
   const location = useLocation();
   const breadcrumbLabel = (() => {
@@ -122,8 +164,73 @@ export default function GovLayout() {
           </nav>
           <div className="header-actions">
             <button className="btn btn-secondary btn-sm mobile-nav-toggle" type="button" onClick={() => setMobileNav((v) => !v)} aria-expanded={mobileNav} aria-label="Toggle navigation">Menu</button>
-            <NavLink className="btn btn-secondary btn-sm" to="/login">Login</NavLink>
-            <NavLink className="btn btn-primary btn-sm" to="/signup">Sign Up</NavLink>
+            {user ? (
+              <div className="profile-dropdown-wrap" ref={profileRef}>
+                <button
+                  type="button"
+                  className="profile-btn"
+                  onClick={() => setProfileOpen((prev) => !prev)}
+                  aria-expanded={profileOpen}
+                  aria-haspopup="true"
+                  aria-label="User profile and settings"
+                >
+                  <span className="profile-avatar-circle" aria-hidden="true">
+                    {user.name ? user.name[0].toUpperCase() : (user.username ? user.username[0].toUpperCase() : "U")}
+                  </span>
+                  <span className="profile-name-text">{user.username || user.name}</span>
+                  <span className="profile-caret" aria-hidden="true">▾</span>
+                </button>
+                {profileOpen && (
+                  <div className="profile-menu" role="menu">
+                    <div className="profile-menu-info">
+                      <div className="profile-menu-name">{user.name}</div>
+                      <div className="profile-menu-email">{user.email}</div>
+                    </div>
+                    <div className="profile-menu-divider" />
+                    <button
+                      type="button"
+                      className="profile-menu-action"
+                      role="menuitem"
+                      onClick={() => {
+                        setEditName(user.name);
+                        setEditUsername(user.username || user.name);
+                        setEditEmail(user.email);
+                        setProfileOpen(false);
+                        setIsEditModalOpen(true);
+                      }}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                      </svg>
+                      Edit Profile
+                    </button>
+                    <button
+                      type="button"
+                      className="profile-menu-action profile-menu-signout"
+                      role="menuitem"
+                      onClick={() => {
+                        setProfileOpen(false);
+                        logout();
+                        navigate("/");
+                      }}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                        <polyline points="16 17 21 12 16 7" />
+                        <line x1="21" y1="12" x2="9" y2="12" />
+                      </svg>
+                      Sign Out
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <NavLink className="btn btn-secondary btn-sm" to="/login">Login</NavLink>
+                <NavLink className="btn btn-primary btn-sm" to="/signup">Sign Up</NavLink>
+              </>
+            )}
           </div>
         </div>
         <div className="nav-rule" aria-hidden="true" />
@@ -153,8 +260,50 @@ export default function GovLayout() {
             <NavLink to="/updates" onClick={() => setMobileNav(false)}>Updates</NavLink>
             <NavLink to="/help" onClick={() => setMobileNav(false)}>Help</NavLink>
             <div className="mobile-actions">
-              <NavLink to="/login" onClick={() => setMobileNav(false)}>Login</NavLink>
-              <NavLink to="/signup" onClick={() => setMobileNav(false)}>Sign Up</NavLink>
+              {user ? (
+                <div className="mobile-profile-box">
+                  <div className="mobile-profile-user">
+                    <span className="profile-avatar-circle" aria-hidden="true">
+                      {user.name ? user.name[0].toUpperCase() : "U"}
+                    </span>
+                    <div className="mobile-profile-details">
+                      <div className="mobile-profile-name">{user.username || user.name}</div>
+                      <div className="mobile-profile-email">{user.email}</div>
+                    </div>
+                  </div>
+                  <div className="mobile-profile-buttons">
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => {
+                        setEditName(user.name);
+                        setEditUsername(user.username || user.name);
+                        setEditEmail(user.email);
+                        setMobileNav(false);
+                        setIsEditModalOpen(true);
+                      }}
+                    >
+                      Edit Profile
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      onClick={() => {
+                        setMobileNav(false);
+                        logout();
+                        navigate("/");
+                      }}
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <NavLink to="/login" onClick={() => setMobileNav(false)}>Login</NavLink>
+                  <NavLink to="/signup" onClick={() => setMobileNav(false)}>Sign Up</NavLink>
+                </>
+              )}
             </div>
           </nav>
         )}
@@ -169,6 +318,76 @@ export default function GovLayout() {
           <div className="footer-bottom"><span>© 2026 SIH 26103 Prototype · For demonstration purposes only · Last Updated: 14 September 2026</span><span>English / हिन्दी ready · No certification claimed</span></div>
         </div>
       </footer>
+      {isEditModalOpen && (
+        <div className="profile-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="edit-profile-title" onClick={() => setIsEditModalOpen(false)}>
+          <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="profile-modal-header">
+              <div>
+                <h3 id="edit-profile-title" style={{ margin: 0, fontSize: "1.05rem", color: "var(--navy-900)" }}>Edit Profile</h3>
+                <p style={{ margin: "2px 0 0", fontSize: "0.8rem", color: "var(--ink-2)" }}>Update your account details</p>
+              </div>
+              <button
+                type="button"
+                className="profile-modal-close"
+                onClick={() => setIsEditModalOpen(false)}
+                aria-label="Close modal"
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={handleSaveProfile}>
+              <div className="profile-modal-body">
+                {saveSuccess && (
+                  <div className="alert alert-info" style={{ padding: "8px 12px", margin: 0, fontSize: "0.85rem" }}>
+                    ✓ Profile updated successfully!
+                  </div>
+                )}
+                <div className="field">
+                  <span><label htmlFor="edit-name">Full Name *</label></span>
+                  <input
+                    id="edit-name"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    placeholder="Enter your name"
+                    required
+                  />
+                </div>
+                <div className="field">
+                  <span><label htmlFor="edit-username">Display Username</label></span>
+                  <input
+                    id="edit-username"
+                    value={editUsername}
+                    onChange={(e) => setEditUsername(e.target.value)}
+                    placeholder="Enter username"
+                  />
+                </div>
+                <div className="field">
+                  <span><label htmlFor="edit-email">Official Email</label></span>
+                  <input
+                    id="edit-email"
+                    type="email"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                    placeholder="name@department.gov.in"
+                  />
+                </div>
+              </div>
+              <div className="profile-modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setIsEditModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary btn-sm">
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

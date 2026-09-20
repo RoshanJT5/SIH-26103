@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { setUser } from "../utils/auth";
 
 export default function SignupPage() {
   const navigate = useNavigate();
@@ -13,8 +14,12 @@ export default function SignupPage() {
     if (name.trim().length < 2) { setError("Enter your full name."); return; }
     if (!email.includes("@")) { setError("Enter a valid email address."); return; }
     if (password.length < 4) { setError("Choose a password of at least 4 characters for this prototype."); return; }
-    sessionStorage.setItem("sih-pending", JSON.stringify({ name, email }));
-    navigate("/login", { replace: true, state: { registered: true } });
+    setUser({
+      name: name.trim(),
+      email: email.trim(),
+      username: name.trim(),
+    });
+    navigate("/dashboard", { replace: true });
   }
 
   return (
@@ -24,7 +29,7 @@ export default function SignupPage() {
         <div className="auth-visual-content">
           <p className="hero-kicker">Join the Prototype</p>
           <h2>Create an account to explore the monitoring portal.</h2>
-          <p>Signup is front-end only. After signup you are redirected to the login page to continue.</p>
+          <p>Create your profile to access real-time project risk monitoring, forecasting, and analytics.</p>
           <div className="auth-badges"><span>Dashboard</span><span>Analytics</span><span>Documents</span></div>
         </div>
       </div>
@@ -39,7 +44,7 @@ export default function SignupPage() {
             <div className="field" style={{ marginBottom: 12 }}><span><label htmlFor="name">Full name *</label></span><input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter your name" required /></div>
             <div className="field" style={{ marginBottom: 12 }}><span><label htmlFor="email">Email *</label></span><input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@department.gov.in" required /></div>
             <div className="field" style={{ marginBottom: 16 }}><span><label htmlFor="password">Password *</label></span><input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Choose a password" required /></div>
-            <button className="btn btn-primary" type="submit" style={{ width: "100%" }}>Sign up → Login</button>
+            <button className="btn btn-primary" type="submit" style={{ width: "100%" }}>Sign up → Dashboard</button>
           </form>
           <p style={{ marginTop: 14 }}>Already registered? <Link className="link" to="/login">Login</Link></p>
         </div>

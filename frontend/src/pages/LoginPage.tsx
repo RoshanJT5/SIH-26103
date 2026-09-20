@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { getUser, setUser } from "../utils/auth";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -11,7 +12,18 @@ export default function LoginPage() {
     e.preventDefault();
     if (!email.includes("@")) { setError("Enter a valid official email address."); return; }
     if (password.length < 4) { setError("Enter your password (minimum 4 characters for this prototype)."); return; }
-    sessionStorage.setItem("sih-auth", JSON.stringify({ email }));
+    
+    const existing = getUser();
+    const cleanEmail = email.trim();
+    const fallbackName = cleanEmail.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    const name = existing && existing.email.toLowerCase() === cleanEmail.toLowerCase() ? existing.name : fallbackName;
+    const username = existing && existing.email.toLowerCase() === cleanEmail.toLowerCase() ? existing.username : fallbackName;
+
+    setUser({
+      name,
+      email: cleanEmail,
+      username,
+    });
     navigate("/dashboard", { replace: true });
   }
 
