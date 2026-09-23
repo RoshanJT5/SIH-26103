@@ -315,3 +315,41 @@ export async function closeWarningApi(id: number): Promise<EarlyWarning> {
   return postJson<EarlyWarning>(`/early-warnings/${id}/close`, {});
 }
 
+export interface SimulationPayload {
+  project_id: number | string;
+  revised_cost_cr?: number;
+  expenditure_cr?: number;
+  physical_progress_pct?: number;
+  schedule_revision_days?: number;
+}
+
+export interface SimulationResponse {
+  project_id: number;
+  project_code: string;
+  project_name?: string;
+  sector?: string;
+  ministry?: string;
+  original_cost_cr?: number;
+  baseline_revised_cost_cr?: number;
+  baseline_expenditure_cr?: number;
+  baseline_physical_progress_pct?: number;
+  baseline_schedule_revision_days?: number;
+  original_overall_score: number | null;
+  original_band: string | null;
+  simulated_overall_score: number | null;
+  simulated_band: string | null;
+  original_cost_score?: number | null;
+  simulated_cost_score?: number | null;
+  original_time_score?: number | null;
+  simulated_time_score?: number | null;
+  original_implementation_score?: number | null;
+  simulated_implementation_score?: number | null;
+  delta: number | null;
+  assumptions: string[];
+  note: string;
+}
+
+export async function simulateProjectApi(payload: SimulationPayload): Promise<SimulationResponse> {
+  return postJson<SimulationResponse>("/simulation/project", payload);
+}
+

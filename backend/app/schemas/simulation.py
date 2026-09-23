@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 
 class SimulationInput(BaseModel):
-    project_id: int
+    project_id: int | str
     revised_cost_cr: Decimal | None = None
     expenditure_cr: Decimal | None = None
     physical_progress_pct: Decimal | None = None
@@ -13,10 +13,24 @@ class SimulationInput(BaseModel):
 class SimulationResult(BaseModel):
     project_id: int
     project_code: str
+    project_name: str | None = None
+    sector: str | None = None
+    ministry: str | None = None
+    original_cost_cr: Decimal | None = None
+    baseline_revised_cost_cr: Decimal | None = None
+    baseline_expenditure_cr: Decimal | None = None
+    baseline_physical_progress_pct: Decimal | None = None
+    baseline_schedule_revision_days: int | None = None
     original_overall_score: Decimal | None
     original_band: str | None
     simulated_overall_score: Decimal | None
     simulated_band: str | None
+    original_cost_score: Decimal | None = None
+    simulated_cost_score: Decimal | None = None
+    original_time_score: Decimal | None = None
+    simulated_time_score: Decimal | None = None
+    original_implementation_score: Decimal | None = None
+    simulated_implementation_score: Decimal | None = None
     delta: Decimal | None
     assumptions: list[str]
     note: str = "Read-only simulation: never persists."
