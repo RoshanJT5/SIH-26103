@@ -21,7 +21,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    app_name: str = "SIH 26103 Project Monitoring"
+    app_name: str = "SameekshaSetu Project Monitoring"
     app_env: str = "development"
     log_level: str = "INFO"
     max_upload_bytes: int = 25 * 1024 * 1024

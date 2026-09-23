@@ -1,5 +1,5 @@
 from decimal import Decimal
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 from ..models import (
     EarlyWarning,
@@ -172,6 +172,9 @@ def generate_for_snapshot(session, snapshot, prediction=None):
 
 
 def ensure_warnings(session, limit=1000):
+    existing_count = session.scalar(select(func.count()).select_from(EarlyWarning))
+    if existing_count and existing_count > 0:
+        return
     snaps = session.scalars(
         select(ProjectSnapshot)
         .join(Dataset)

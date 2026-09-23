@@ -85,7 +85,7 @@ export default function LoginPage() {
         <img src="https://picsum.photos/seed/india-parliament-house/1200/1400" alt="" />
         <div className="auth-visual-content">
           <p className="hero-kicker">Official Portal Access</p>
-          <h2>Secure access to the infrastructure project monitoring portal.</h2>
+          <h2>Secure access to the SameekshaSetu infrastructure monitoring portal.</h2>
           <p>
             Detailed project risk indicators, ML predictions, and intervention management require authenticated officer credentials.
           </p>
@@ -99,10 +99,16 @@ export default function LoginPage() {
       <div className="auth-form-side">
         <div className="auth-top">
           <Link className="link" to="/" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><ArrowLeft size={14} />Back to Home</Link>
-          <span>SIH 26103 · Secure Gateway</span>
+          <span>SameekshaSetu · Secure Gateway</span>
         </div>
         <div className="auth-box">
-          <p className="section-eyebrow">Officer Sign In</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+            <img src="/logo.png" alt="SameekshaSetu Logo" style={{ width: 44, height: 44, borderRadius: "50%", background: "#fff", padding: 2, border: "2px solid rgba(18, 59, 115, 0.12)", boxShadow: "0 2px 8px rgba(0,0,0,0.08)", objectFit: "cover" }} />
+            <div>
+              <p className="section-eyebrow" style={{ margin: 0 }}>Officer Sign In</p>
+              <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--navy-900)" }}>SameekshaSetu</span>
+            </div>
+          </div>
           <h1>Login to your account</h1>
           <p className="sub">
             Access protected monitoring dashboards, early warnings, and analytical forecasting.

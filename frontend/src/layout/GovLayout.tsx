@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   User,
   LogOut,
@@ -166,7 +166,14 @@ export default function GovLayout() {
       </div>
       <header className="site-header">
         <div className="header-inner">
-          <div className="brand"><div className="brand-emblem" aria-hidden="true">SIH<br />26103</div><div className="brand-text"><p className="brand-org">Government Digital Governance Prototype</p><p className="brand-title">Infrastructure Project Monitoring Portal</p><p className="brand-sub">SIH 26103 · Evidence-backed project oversight</p></div></div>
+          <Link to="/" className="brand" style={{ textDecoration: "none", color: "inherit", display: "inline-flex", alignItems: "center", gap: 12, margin: "0 0 0 2px" }}>
+            <img
+              src="/logo.png"
+              alt="SameekshaSetu Logo"
+              className="brand-logo-img"
+            />
+            <span className="brand-title">SameekshaSetu</span>
+          </Link>
           <nav className="main-nav" aria-label="Primary">
             {TOP.map((item) =>
               isDrop(item) ? (
@@ -359,8 +366,8 @@ export default function GovLayout() {
       </main>
       <footer className="site-footer" id="footer">
         <div className="wrap">
-          <div className="footer-grid"><div><h2>Infrastructure Project Monitoring Portal</h2><p>SIH 26103 Prototype</p><p>“This prototype demonstrates digital monitoring, risk visibility and evidence-based decision support.”</p><p className="footer-teal">Prototype — not an official Government of India website.</p></div><nav aria-label="Platform"><h3>Platform</h3><ul><li><NavLink to="/">Home</NavLink></li><li><NavLink to="/dashboard">Dashboard</NavLink></li><li><NavLink to="/projects">Projects</NavLink></li><li><NavLink to="/analytics">Analytics</NavLink></li><li><NavLink to="/documents">Documents</NavLink></li></ul></nav><nav aria-label="Information"><h3>Information</h3><ul><li><NavLink to="/help">Accessibility</NavLink></li><li><NavLink to="/faq">FAQs</NavLink></li><li><NavLink to="/help">Help</NavLink></li><li><a href="#footer">Contact</a></li><li><NavLink to="/documents">Sitemap</NavLink></li></ul></nav><nav aria-label="Policies"><h3>Policies</h3><ul><li><NavLink to="/help">Privacy</NavLink></li><li><NavLink to="/help">Terms of Use</NavLink></li><li><NavLink to="/help">Accessibility Statement</NavLink></li><li><NavLink to="/help">Data Policy</NavLink></li></ul></nav></div>
-          <div className="footer-bottom"><span>© 2026 SIH 26103 Prototype · For demonstration purposes only · Last Updated: 14 September 2026</span><span>English / हिन्दी ready · No certification claimed</span></div>
+          <div className="footer-grid"><div><div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}><img src="/logo.png" alt="SameekshaSetu Logo" style={{ width: 44, height: 44, borderRadius: "50%", background: "#fff", padding: 2, objectFit: "cover", boxShadow: "0 2px 6px rgba(0,0,0,0.2)" }} /><h2 style={{ margin: 0, color: "#fff" }}>SameekshaSetu</h2></div><p>Infrastructure Project Monitoring Portal</p><p>“Digital monitoring, risk visibility and evidence-based decision support.”</p><p className="footer-teal">SameekshaSetu · Evidence-backed infrastructure oversight.</p></div><nav aria-label="Platform"><h3>Platform</h3><ul><li><NavLink to="/">Home</NavLink></li><li><NavLink to="/dashboard">Dashboard</NavLink></li><li><NavLink to="/projects">Projects</NavLink></li><li><NavLink to="/analytics">Analytics</NavLink></li><li><NavLink to="/documents">Documents</NavLink></li></ul></nav><nav aria-label="Information"><h3>Information</h3><ul><li><NavLink to="/help">Accessibility</NavLink></li><li><NavLink to="/faq">FAQs</NavLink></li><li><NavLink to="/help">Help</NavLink></li><li><a href="#footer">Contact</a></li><li><NavLink to="/documents">Sitemap</NavLink></li></ul></nav><nav aria-label="Policies"><h3>Policies</h3><ul><li><NavLink to="/help">Privacy</NavLink></li><li><NavLink to="/help">Terms of Use</NavLink></li><li><NavLink to="/help">Accessibility Statement</NavLink></li><li><NavLink to="/help">Data Policy</NavLink></li></ul></nav></div>
+          <div className="footer-bottom"><span>© 2026 SameekshaSetu · For demonstration purposes only · Last Updated: 14 September 2026</span><span>English / हिन्दी ready · No certification claimed</span></div>
         </div>
       </footer>
       {isEditModalOpen && (

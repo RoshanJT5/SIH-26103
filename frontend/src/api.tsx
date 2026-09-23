@@ -83,7 +83,70 @@ export interface RouteAccessResponse {
   user?: AuthUser;
 }
 
-export async function getJson<T>(path: string): Promise<T> {
+export interface FetchOptions {
+  useCache?: boolean;
+  ttlMs?: number;
+  forceRefresh?: boolean;
+}
+
+const CACHE_PREFIX = "sameeksha_cache:";
+const DEFAULT_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes session TTL
+
+export function getFromSessionCache<T>(key: string, ttlMs = DEFAULT_CACHE_TTL_MS): T | null {
+  try {
+    const raw = sessionStorage.getItem(`${CACHE_PREFIX}${key}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || !("timestamp" in parsed)) return null;
+    if (Date.now() - parsed.timestamp < ttlMs) {
+      return parsed.data as T;
+    }
+  } catch {
+    // sessionStorage not accessible or JSON error
+  }
+  return null;
+}
+
+export function saveToSessionCache<T>(key: string, data: T): void {
+  try {
+    sessionStorage.setItem(
+      `${CACHE_PREFIX}${key}`,
+      JSON.stringify({ timestamp: Date.now(), data })
+    );
+  } catch {
+    // quota exceeded or disabled, ignore
+  }
+}
+
+export function clearApiCache(prefix?: string): void {
+  try {
+    const toRemove: string[] = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const k = sessionStorage.key(i);
+      if (k && k.startsWith(CACHE_PREFIX)) {
+        if (!prefix || k.includes(prefix)) {
+          toRemove.push(k);
+        }
+      }
+    }
+    toRemove.forEach((k) => sessionStorage.removeItem(k));
+  } catch {
+    // ignore
+  }
+}
+
+export async function getJson<T>(path: string, options?: FetchOptions): Promise<T> {
+  const useCache = options?.useCache ?? true;
+  const ttlMs = options?.ttlMs ?? DEFAULT_CACHE_TTL_MS;
+  const forceRefresh = options?.forceRefresh ?? false;
+
+  if (useCache && !forceRefresh) {
+    const cached = getFromSessionCache<T>(path, ttlMs);
+    if (cached !== null) {
+      return cached;
+    }
+  }
+
   const token = getToken();
   const headers: Record<string, string> = {};
   if (token) {
@@ -91,7 +154,13 @@ export async function getJson<T>(path: string): Promise<T> {
   }
   const response = await fetch(`${API_URL}${path}`, { headers });
   if (!response.ok) throw new Error(`Request failed (${response.status})`);
-  return response.json() as Promise<T>;
+  const data = (await response.json()) as T;
+
+  if (useCache) {
+    saveToSessionCache(path, data);
+  }
+
+  return data;
 }
 
 export async function postJson<T>(path: string, body: unknown): Promise<T> {

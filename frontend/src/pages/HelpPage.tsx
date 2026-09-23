@@ -1,14 +1,6 @@
-import { useEffect, useState } from "react";
-import { LifeBuoy, Activity, MessageSquare, Keyboard, ShieldCheck } from "lucide-react";
-import { API_URL, getJson, type Health } from "../api";
+import { LifeBuoy, MessageSquare, Keyboard, ShieldCheck } from "lucide-react";
 
 export default function HelpPage() {
-  const [health, setHealth] = useState<Health | null>(null);
-
-  useEffect(() => {
-    getJson<Health>("/health").then(setHealth).catch(() => null);
-  }, []);
-
   return (
     <section className="section faq" aria-labelledby="t">
       <div className="wrap">
@@ -17,8 +9,8 @@ export default function HelpPage() {
           <h2 id="t" style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <LifeBuoy size={26} color="var(--navy-700)" /> Help, FAQs and support
           </h2>
-          <p style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-            <Activity size={15} color="var(--teal)" /> Service status: <code>GET /health</code> → {health ? `${health.status} / DB ${health.database} / assistant ${health.assistant_enabled ? "enabled" : "disabled"}` : "checking…"} · API: {API_URL}
+          <p style={{ color: "var(--ink-2)", margin: "4px 0 0" }}>
+            Guidance, platform FAQs, accessibility assistance, and grievance redressal for SameekshaSetu officers and stakeholders.
           </p>
         </div>
         <details open><summary>What does the overall score mean?</summary><p>A stored 0–100 summary of cost, time and implementation signals for one snapshot. Higher means higher stored exposure. See Dashboard for the current totals.</p></details>

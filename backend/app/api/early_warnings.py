@@ -11,6 +11,7 @@ from ..schemas.early_warnings import (
     Page,
 )
 from ..services.early_warning import ensure_warnings, enriched
+from ..services.prediction_loader import clear_backend_cache
 
 router = APIRouter(prefix="/early-warnings", tags=["early-warnings"])
 
@@ -84,6 +85,7 @@ def acknowledge(
         )
     ew.status = "acknowledged"
     db.commit()
+    clear_backend_cache()
     db.refresh(ew)
     extra = enriched(db, ew)
     return EarlyWarningResponse.model_validate(
@@ -102,6 +104,7 @@ def close_warning(
         raise HTTPException(status_code=404, detail="Early warning not found.")
     ew.status = "closed"
     db.commit()
+    clear_backend_cache()
     db.refresh(ew)
     extra = enriched(db, ew)
     return EarlyWarningResponse.model_validate(

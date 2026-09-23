@@ -23,9 +23,9 @@ const SLIDES: Slide[] = [
   {
     src: "https://picsum.photos/seed/power-grid-expansion/1200/700",
     alt: "Power transmission lines across the landscape",
-    tag: "SIH demonstration prototype",
+    tag: "SameekshaSetu Platform",
     title: "Built to show how public monitoring can work",
-    text: "A credible early-stage prototype of a national project monitoring portal.",
+    text: "A credible national infrastructure project monitoring portal.",
     cta: { to: "/projects", label: "Browse Projects" },
   },
 ];

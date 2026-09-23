@@ -1,8 +1,13 @@
 from decimal import Decimal
 from collections import defaultdict
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from ..models import Dataset, ProjectSnapshot, RiskPrediction
+from ..services.prediction_loader import (
+    get_latest_predictions_map,
+    get_cached,
+    set_cached,
+)
 
 VERSION = "risk-trends-v1"
 
@@ -41,14 +46,28 @@ def get_trends(
     limit=100,
     offset=0,
 ):
+    cache_key = f"trends:{dataset_id}:{project_id}:{sector}:{ministry}:{min_change}:{limit}:{offset}"
+    cached = get_cached(cache_key)
+    if cached is not None:
+        return cached
+
     completed = session.scalars(
         select(Dataset).where(Dataset.status == "completed").order_by(Dataset.id.asc())
     ).all()
     if not completed:
         return [], 0
     snaps = session.scalars(
-        select(ProjectSnapshot).join(Dataset).where(Dataset.status == "completed")
+        select(ProjectSnapshot)
+        .options(
+            joinedload(ProjectSnapshot.project),
+            joinedload(ProjectSnapshot.dataset),
+        )
+        .join(Dataset)
+        .where(Dataset.status == "completed")
     ).all()
+    all_sids = [s.id for s in snaps]
+    preds_map = get_latest_predictions_map(session, all_sids)
+
     by_project = defaultdict(list)
     for s in snaps:
         by_project[s.project_id].append(s)
@@ -68,7 +87,7 @@ def get_trends(
         snaps_sorted = sorted(slist, key=lambda x: x.dataset_id)
         history = []
         for snap in snaps_sorted:
-            pred = _latest(session, snap.id)
+            pred = preds_map.get(snap.id)
             ds = snap.dataset
             history.append(
                 {
@@ -121,4 +140,6 @@ def get_trends(
     )
     total = len(items)
     paged = items[offset : offset + limit]
-    return paged, total
+    res = (paged, total)
+    set_cached(cache_key, res)
+    return res

@@ -9,7 +9,7 @@ import {
   PlusCircle,
   Clock,
 } from "lucide-react";
-import { createProjectApi, type CreateProjectPayload, type CreateProjectResult } from "../api";
+import { createProjectApi, clearApiCache, type CreateProjectPayload, type CreateProjectResult } from "../api";
 
 interface Props {
   isOpen: boolean;
@@ -70,6 +70,7 @@ export default function CreateProjectModal({ isOpen, onClose, onCreated }: Props
       };
 
       const res = await createProjectApi(payload);
+      clearApiCache();
       setResult(res);
       if (onCreated) onCreated(res);
     } catch (err: any) {

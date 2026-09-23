@@ -18,8 +18,9 @@ import {
   Bot,
   Send,
   ArrowRight,
+  RefreshCw,
 } from "lucide-react";
-import { formatCrore, formatNumber, getJson, initializeDemoApi, API_URL, type AssistantResponse, type Dashboard } from "../api";
+import { formatCrore, formatNumber, getJson, initializeDemoApi, clearApiCache, API_URL, type AssistantResponse, type Dashboard } from "../api";
 import CreateProjectModal from "../components/CreateProjectModal";
 import UploadDatasetModal from "../components/UploadDatasetModal";
 
@@ -27,6 +28,7 @@ export default function DashboardPage() {
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [q, setQ] = useState("");
   const [answer, setAnswer] = useState<AssistantResponse | null>(null);
   const [asking, setAsking] = useState(false);
@@ -39,13 +41,19 @@ export default function DashboardPage() {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [initializingDemo, setInitializingDemo] = useState(false);
 
-  const loadData = () => {
-    setLoading(true);
-    getJson<Dashboard>("/dashboard/summary").then(setDashboard).catch((e: Error) => setError(e.message)).finally(() => setLoading(false));
-    getJson<any>("/risk/trends?limit=5").then(setTrends).catch(()=>null);
-    getJson<any>("/interventions/priority?limit=5").then(setPriority).catch(()=>null);
-    getJson<any>("/early-warnings?limit=5").then(setWarnings).catch(()=>null);
-    getJson<any>("/analytics/cost-drivers?limit=5").then(setDrivers).catch(()=>null);
+  const loadData = (force = false) => {
+    if (force) setRefreshing(true);
+    else setLoading(true);
+
+    getJson<Dashboard>("/dashboard/summary", { forceRefresh: force })
+      .then(setDashboard)
+      .catch((e: Error) => setError(e.message))
+      .finally(() => { setLoading(false); setRefreshing(false); });
+
+    getJson<any>("/risk/trends?limit=5", { forceRefresh: force }).then(setTrends).catch(()=>null);
+    getJson<any>("/interventions/priority?limit=5", { forceRefresh: force }).then(setPriority).catch(()=>null);
+    getJson<any>("/early-warnings?limit=5", { forceRefresh: force }).then(setWarnings).catch(()=>null);
+    getJson<any>("/analytics/cost-drivers?limit=5", { forceRefresh: force }).then(setDrivers).catch(()=>null);
   };
 
   useEffect(() => {
@@ -57,7 +65,8 @@ export default function DashboardPage() {
     setError("");
     try {
       await initializeDemoApi();
-      loadData();
+      clearApiCache();
+      loadData(true);
     } catch (err: any) {
       setError(err?.message || "Failed to initialize demo MoSPI portfolio.");
     } finally {
@@ -77,9 +86,19 @@ export default function DashboardPage() {
         <div>
           <p className="section-eyebrow">Monitoring · Dashboard — 10-block portfolio</p>
           <h2 id="t">Portfolio risk dashboard</h2>
-          <p>Live from /dashboard/summary and six supporting endpoints. All blocks read live backend.</p>
+          <p>Instant cached loading with live backend verification. All blocks update automatically.</p>
         </div>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => { clearApiCache(); loadData(true); }}
+            disabled={refreshing}
+            style={{ fontSize: "0.85rem", padding: "8px 14px", display: "inline-flex", alignItems: "center", gap: 6 }}
+            title="Refresh latest data from backend"
+          >
+            <RefreshCw size={15} className={refreshing ? "spin-icon" : ""} /> {refreshing ? "Refreshing..." : "Refresh"}
+          </button>
           <button
             type="button"
             className="btn btn-secondary"

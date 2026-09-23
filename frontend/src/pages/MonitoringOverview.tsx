@@ -14,12 +14,14 @@ import {
   CheckCheck,
   ArrowRight,
   Eye,
+  RefreshCw,
 } from "lucide-react";
 import {
   Band,
   formatNumber,
   formatPercent,
   getJson,
+  clearApiCache,
   acknowledgeWarningApi,
   closeWarningApi,
   type EarlyWarning,
@@ -34,16 +36,19 @@ export default function MonitoringOverview() {
   const [warnings, setWarnings] = useState<EarlyWarning[]>([]);
   const [priority, setPriority] = useState<PriorityResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState<number | null>(null);
 
-  const loadData = () => {
-    setLoading(true);
+  const loadData = (force = false) => {
+    if (force) setRefreshing(true);
+    else setLoading(true);
+
     Promise.all([
-      getJson<Dashboard>("/dashboard/summary").catch(() => null),
-      getJson<{ items: Project[] }>("/projects?risk_band=critical&limit=6").catch(() => ({ items: [] })),
-      getJson<{ items: EarlyWarning[] }>("/early-warnings?status=open&limit=6").catch(() => ({ items: [] })),
-      getJson<PriorityResponse>("/interventions/priority?limit=5").catch(() => null),
+      getJson<Dashboard>("/dashboard/summary", { forceRefresh: force }).catch(() => null),
+      getJson<{ items: Project[] }>("/projects?risk_band=critical&limit=6", { forceRefresh: force }).catch(() => ({ items: [] })),
+      getJson<{ items: EarlyWarning[] }>("/early-warnings?status=open&limit=6", { forceRefresh: force }).catch(() => ({ items: [] })),
+      getJson<PriorityResponse>("/interventions/priority?limit=5", { forceRefresh: force }).catch(() => null),
     ])
       .then(([dash, crit, warn, prio]) => {
         if (dash) setDashboard(dash);
@@ -52,7 +57,7 @@ export default function MonitoringOverview() {
         if (prio) setPriority(prio);
       })
       .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false));
+      .finally(() => { setLoading(false); setRefreshing(false); });
   };
 
   useEffect(() => {
@@ -63,6 +68,8 @@ export default function MonitoringOverview() {
     setActionLoading(id);
     try {
       await acknowledgeWarningApi(id);
+      clearApiCache("/early-warnings");
+      clearApiCache("/dashboard/summary");
       setWarnings((prev) =>
         prev.map((w) => (w.id === id ? { ...w, status: "acknowledged" } : w))
       );
@@ -77,6 +84,8 @@ export default function MonitoringOverview() {
     setActionLoading(id);
     try {
       await closeWarningApi(id);
+      clearApiCache("/early-warnings");
+      clearApiCache("/dashboard/summary");
       setWarnings((prev) => prev.filter((w) => w.id !== id));
     } catch (err: any) {
       alert(err?.message || "Failed to resolve warning");
@@ -88,17 +97,32 @@ export default function MonitoringOverview() {
   return (
     <section className="section" aria-labelledby="monitoring-title">
       <div className="wrap">
-        <div className="section-head" style={{ marginBottom: 18 }}>
-          <p className="section-eyebrow">Institutional Oversight</p>
-          <h1 id="monitoring-title" style={{ color: "var(--navy-900)", margin: "4px 0 8px", fontSize: "1.8rem" }}>
-            Monitoring Command Center
-          </h1>
-          <p>
-            Central hub for real-time infrastructure surveillance: active early warnings triage, critical risk watchlist, snapshot differentials, and intervention queues.
-          </p>
+        <div className="section-head" style={{ marginBottom: 18, display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
+          <div>
+            <p className="section-eyebrow">Institutional Oversight</p>
+            <h1 id="monitoring-title" style={{ color: "var(--navy-900)", margin: "4px 0 8px", fontSize: "1.8rem" }}>
+              Monitoring Command Center
+            </h1>
+            <p>
+              Central hub for real-time infrastructure surveillance: active early warnings triage, critical risk watchlist, snapshot differentials, and intervention queues.
+            </p>
+          </div>
+          <div>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => { clearApiCache(); loadData(true); }}
+              disabled={refreshing}
+              style={{ fontSize: "0.85rem", padding: "8px 14px", display: "inline-flex", alignItems: "center", gap: 6 }}
+              title="Refresh latest data from backend"
+            >
+              <RefreshCw size={15} className={refreshing ? "spin-icon" : ""} /> {refreshing ? "Refreshing..." : "Refresh"}
+            </button>
+          </div>
+        </div>
 
-          {/* Subsystem Navigation Bar */}
-          <div className="tabs" style={{ marginTop: 14 }}>
+        {/* Subsystem Navigation Bar */}
+        <div className="tabs" style={{ marginTop: 14 }}>
             <button type="button" aria-selected="true" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
               <LayoutDashboard size={15} /> Command Overview
             </button>
@@ -115,7 +139,6 @@ export default function MonitoringOverview() {
               <TrendingDown size={15} /> Risk Trends
             </Link>
           </div>
-        </div>
 
         {error && <div className="alert alert-error" role="alert">{error}</div>}
 

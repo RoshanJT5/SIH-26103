@@ -70,7 +70,7 @@ export default function FaqPage() {
           </h1>
           <p className="sub" style={{ maxWidth: 720 }}>
             Learn about access policies, public versus protected areas, data methodologies,
-            and monitoring tools for the Infrastructure Project Monitoring Portal (SIH 26103).
+            and monitoring tools for SameekshaSetu (Infrastructure Project Monitoring Portal).
           </p>
         </div>
 

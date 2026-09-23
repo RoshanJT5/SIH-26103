@@ -7,7 +7,7 @@ import {
   RefreshCw,
   Clock,
 } from "lucide-react";
-import { uploadDatasetApi } from "../api";
+import { uploadDatasetApi, clearApiCache } from "../api";
 
 interface Props {
   isOpen: boolean;
@@ -35,6 +35,7 @@ export default function UploadDatasetModal({ isOpen, onClose, onUploaded }: Prop
 
     try {
       const res = await uploadDatasetApi(file, sourceDate || undefined);
+      clearApiCache();
       setResult(res);
       if (onUploaded) onUploaded(res);
     } catch (err: any) {

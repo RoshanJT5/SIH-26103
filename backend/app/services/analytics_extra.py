@@ -9,6 +9,11 @@ from ..models import (
     ModelVersion,
     Dataset,
 )
+from ..services.prediction_loader import (
+    get_latest_predictions_map,
+    get_cached,
+    set_cached,
+)
 
 
 def _latest(session, sid):
@@ -74,10 +79,18 @@ def ministry_health(session, ministry):
 
 
 def geography(session):
+    cache_key = "analytics_geography"
+    cached = get_cached(cache_key)
+    if cached is not None:
+        return cached
+
     # illustrative: group by ministry as region proxy plus sector
     snaps = session.scalars(
         select(ProjectSnapshot).join(Dataset).where(Dataset.status == "completed")
     ).all()
+    all_sids = [s.id for s in snaps]
+    preds_map = get_latest_predictions_map(session, all_sids)
+
     by_ministry = defaultdict(list)
     for s in snaps:
         by_ministry[s.ministry].append(s)
@@ -86,7 +99,7 @@ def geography(session):
         scores = []
         high = crit = 0
         for snap in lst:
-            pred = _latest(session, snap.id)
+            pred = preds_map.get(snap.id)
             if pred and pred.overall_score is not None:
                 scores.append(pred.overall_score)
             if pred and pred.risk_band == "high":
@@ -102,6 +115,7 @@ def geography(session):
                 "high_risk_projects": high + crit,
             }
         )
+    set_cached(cache_key, out)
     return out
 
 

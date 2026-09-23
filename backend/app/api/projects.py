@@ -23,6 +23,7 @@ from ..models import (
 from ..schemas.project_create import CreateProjectRequest, CreateProjectResponse
 from ..schemas.uploads import UploadValidationResponse
 from ..services.csv_upload import CsvUploadError, validate_project_csv
+from ..services.prediction_loader import clear_backend_cache
 from ..services.dataset_init import ensure_demo_dataset_loaded
 from ..services.early_warning import generate_for_snapshot
 from ..services.features import (
@@ -52,6 +53,7 @@ def initialize_demo(
     _user: dict[str, Any] = Depends(get_current_user),
 ) -> dict[str, Any]:
     """1-click baseline loading of the 1,775-project MoSPI dataset."""
+    clear_backend_cache()
     return ensure_demo_dataset_loaded(db)
 
 
@@ -231,6 +233,7 @@ def create_project(
             db.add(ew)
 
     db.commit()
+    clear_backend_cache()
 
     return CreateProjectResponse(
         project_id=project.id,
@@ -297,6 +300,7 @@ async def upload_project_csv(
     except Exception:
         pass
 
+    clear_backend_cache()
     return UploadValidationResponse(
         dataset_id=dataset.id,
         filename=filename,

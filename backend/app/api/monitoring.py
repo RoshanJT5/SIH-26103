@@ -4,9 +4,14 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import Select, func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from ..db.session import get_db
+from ..services.prediction_loader import (
+    get_latest_predictions_map,
+    get_cached,
+    set_cached,
+)
 from ..models import (
     Alert,
     Dataset,
@@ -123,6 +128,10 @@ def _snapshot_query(
         conditions.append(ProjectSnapshot.physical_progress_pct <= max_progress)
     return (
         select(ProjectSnapshot)
+        .options(
+            joinedload(ProjectSnapshot.project),
+            joinedload(ProjectSnapshot.dataset),
+        )
         .join(ProjectSnapshot.dataset)
         .where(*conditions)
         .order_by(ProjectSnapshot.id.asc())
@@ -201,8 +210,10 @@ def list_projects(
         min_progress=min_progress,
         max_progress=max_progress,
     )
+    snapshot_ids = [s.id for s in snapshots]
+    preds_map = get_latest_predictions_map(db, snapshot_ids)
     items = [
-        (_summary(snapshot, _latest_prediction(db, snapshot.id)))
+        (_summary(snapshot, preds_map.get(snapshot.id)))
         for snapshot in snapshots
     ]
     if risk_band is not None:
@@ -258,15 +269,18 @@ def _analytics(
     snapshots: list[ProjectSnapshot],
     attribute: str,
 ) -> list[GroupAnalytics]:
-    grouped: dict[str, list[ProjectSummary]] = {}
+    snapshot_ids = [s.id for s in snapshots]
+    preds_map = get_latest_predictions_map(session, snapshot_ids)
+    grouped: dict[str, list[tuple[ProjectSnapshot, RiskPrediction | None]]] = {}
     for snapshot in snapshots:
-        grouped.setdefault(getattr(snapshot, attribute), []).append(
-            _summary(snapshot, _latest_prediction(session, snapshot.id))
-        )
+        val = getattr(snapshot, attribute, None) or "Unknown"
+        grouped.setdefault(val, []).append((snapshot, preds_map.get(snapshot.id)))
     result = []
     for group, items in sorted(grouped.items()):
         scores = [
-            item.overall_score for item in items if item.overall_score is not None
+            pred.overall_score
+            for _, pred in items
+            if pred and pred.overall_score is not None
         ]
         result.append(
             GroupAnalytics(
@@ -274,8 +288,8 @@ def _analytics(
                 project_count=len(items),
                 available_prediction_count=len(scores),
                 average_overall_score=None if not scores else sum(scores) / len(scores),
-                high_risk_projects=sum(item.risk_band == "high" for item in items),
-                critical_projects=sum(item.risk_band == "critical" for item in items),
+                high_risk_projects=sum(pred is not None and pred.risk_band == "high" for _, pred in items),
+                critical_projects=sum(pred is not None and pred.risk_band == "critical" for _, pred in items),
             )
         )
     return result
@@ -294,6 +308,11 @@ def dashboard_summary(
     max_progress: Annotated[Decimal | None, Query(ge=0, le=100)] = None,
     db: Session = Depends(get_db),
 ) -> DashboardSummary:
+    cache_key = f"dash_summary:{dataset_id}:{sector}:{ministry}:{agency}:{risk_band}:{min_cost}:{max_cost}:{min_progress}:{max_progress}"
+    cached = get_cached(cache_key)
+    if cached is not None:
+        return cached
+
     _validate_bounds(min_cost, max_cost, "cost")
     _validate_bounds(min_progress, max_progress, "progress")
     snapshots = _filtered_snapshots(
@@ -307,32 +326,44 @@ def dashboard_summary(
         min_progress=min_progress,
         max_progress=max_progress,
     )
-    snapshots = [
-        snapshot
-        for snapshot in snapshots
-        if _matches_risk_band(db, snapshot, risk_band)
+    snapshot_ids = [s.id for s in snapshots]
+    preds_map = get_latest_predictions_map(db, snapshot_ids)
+    if risk_band is not None:
+        snapshots = [
+            s for s in snapshots
+            if (p := preds_map.get(s.id)) is not None and p.risk_band == risk_band
+        ]
+    scores = [
+        p.overall_score for s in snapshots
+        if (p := preds_map.get(s.id)) is not None and p.overall_score is not None
     ]
-    items = [
-        _summary(snapshot, _latest_prediction(db, snapshot.id))
-        for snapshot in snapshots
-    ]
-    revised = [
-        item.revised_cost_cr for item in items if item.revised_cost_cr is not None
-    ]
-    scores = [item.overall_score for item in items if item.overall_score is not None]
-    return DashboardSummary(
-        total_projects=len(items),
+    high_count = sum(
+        1 for s in snapshots
+        if (p := preds_map.get(s.id)) is not None and p.risk_band == "high"
+    )
+    crit_count = sum(
+        1 for s in snapshots
+        if (p := preds_map.get(s.id)) is not None and p.risk_band == "critical"
+    )
+    total_revised = sum(
+        (s.revised_cost_cr for s in snapshots if s.revised_cost_cr is not None),
+        Decimal("0"),
+    )
+    res = DashboardSummary(
+        total_projects=len(snapshots),
         available_predictions=len(scores),
-        high_risk_projects=sum(item.risk_band == "high" for item in items),
-        critical_projects=sum(item.risk_band == "critical" for item in items),
+        high_risk_projects=high_count,
+        critical_projects=crit_count,
         average_overall_score=None if not scores else sum(scores) / len(scores),
         total_original_cost_cr=sum(
-            (item.original_cost_cr for item in items), Decimal("0")
+            (s.original_cost_cr for s in snapshots), Decimal("0")
         ),
-        total_revised_cost_cr=sum(revised, Decimal("0")),
-        total_expenditure_cr=sum((item.expenditure_cr for item in items), Decimal("0")),
-        dataset=items[0].dataset if items else None,
+        total_revised_cost_cr=total_revised,
+        total_expenditure_cr=sum((s.expenditure_cr for s in snapshots), Decimal("0")),
+        dataset=_freshness(snapshots[0].dataset) if snapshots else None,
     )
+    set_cached(cache_key, res)
+    return res
 
 
 @router.get("/analytics/sectors", response_model=list[GroupAnalytics])
@@ -348,6 +379,11 @@ def sector_analytics(
     max_progress: Annotated[Decimal | None, Query(ge=0, le=100)] = None,
     db: Session = Depends(get_db),
 ) -> list[GroupAnalytics]:
+    cache_key = f"sec_analytics:{dataset_id}:{sector}:{ministry}:{agency}:{risk_band}:{min_cost}:{max_cost}:{min_progress}:{max_progress}"
+    cached = get_cached(cache_key)
+    if cached is not None:
+        return cached
+
     _validate_bounds(min_cost, max_cost, "cost")
     _validate_bounds(min_progress, max_progress, "progress")
     snapshots = _filtered_snapshots(
@@ -361,12 +397,15 @@ def sector_analytics(
         min_progress=min_progress,
         max_progress=max_progress,
     )
-    snapshots = [
-        snapshot
-        for snapshot in snapshots
-        if _matches_risk_band(db, snapshot, risk_band)
-    ]
-    return _analytics(db, snapshots, "sector")
+    if risk_band is not None:
+        preds_map = get_latest_predictions_map(db, [s.id for s in snapshots])
+        snapshots = [
+            s for s in snapshots
+            if (p := preds_map.get(s.id)) is not None and p.risk_band == risk_band
+        ]
+    res = _analytics(db, snapshots, "sector")
+    set_cached(cache_key, res)
+    return res
 
 
 @router.get("/analytics/ministries", response_model=list[GroupAnalytics])
@@ -382,6 +421,11 @@ def ministry_analytics(
     max_progress: Annotated[Decimal | None, Query(ge=0, le=100)] = None,
     db: Session = Depends(get_db),
 ) -> list[GroupAnalytics]:
+    cache_key = f"min_analytics:{dataset_id}:{sector}:{ministry}:{agency}:{risk_band}:{min_cost}:{max_cost}:{min_progress}:{max_progress}"
+    cached = get_cached(cache_key)
+    if cached is not None:
+        return cached
+
     _validate_bounds(min_cost, max_cost, "cost")
     _validate_bounds(min_progress, max_progress, "progress")
     snapshots = _filtered_snapshots(
@@ -395,12 +439,15 @@ def ministry_analytics(
         min_progress=min_progress,
         max_progress=max_progress,
     )
-    snapshots = [
-        snapshot
-        for snapshot in snapshots
-        if _matches_risk_band(db, snapshot, risk_band)
-    ]
-    return _analytics(db, snapshots, "ministry")
+    if risk_band is not None:
+        preds_map = get_latest_predictions_map(db, [s.id for s in snapshots])
+        snapshots = [
+            s for s in snapshots
+            if (p := preds_map.get(s.id)) is not None and p.risk_band == risk_band
+        ]
+    res = _analytics(db, snapshots, "ministry")
+    set_cached(cache_key, res)
+    return res
 
 
 @router.get("/analytics/benchmarks", response_model=BenchmarkResponse)
