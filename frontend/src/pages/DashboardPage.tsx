@@ -152,9 +152,9 @@ export default function DashboardPage() {
 
             <article className="card">
               <h3 style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <AlertTriangle size={17} color="var(--error)" /> 2 · High / Critical
+                <AlertTriangle size={17} color="var(--error)" /> 2 · Critical / High
               </h3>
-              <p style={{fontSize:"1.8rem",fontWeight:700,color:"#123B73"}}>{dashboard.high_risk_projects} / {dashboard.critical_projects}</p>
+              <p style={{fontSize:"1.8rem",fontWeight:700,color:"#123B73"}}>{dashboard.critical_projects} / {dashboard.high_risk_projects} </p>
               <p>Average {formatNumber(dashboard.average_overall_score,1)} /100</p>
               <Link className="link" to="/analytics" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
                 See analytics <ArrowRight size={14} />
